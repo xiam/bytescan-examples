@@ -73,7 +73,7 @@ would fail `Next` with the limit error.
   end of the SSE stream it returns `io.EOF`.
 - **The JSON layer** (`driver.go`, `newJSONDriver`) is a
   [`modes.Driver`](https://github.com/xiam/bytescan/tree/master/modes) over the second cursor,
-  `textreader.New(pipe)`, with a value mode and a string mode. `JSON_QUOTE`
+  `cursor.New(pipe)`, with a value mode and a string mode. `JSON_QUOTE`
   switches between them; in string mode `JSON_EOL` also returns to value
   mode.
 

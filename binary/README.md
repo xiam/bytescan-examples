@@ -42,7 +42,7 @@ examples:
 | Name | Does |
 | --- | --- |
 | `NewReader(r)` | an `io.RuneReader` that returns each byte of `r` as one rune, U+0000 to U+00FF |
-| `NewCursor(r)` | a `textreader` cursor over `NewReader(r)`, for `bytescan.NewWithCursor` |
+| `NewCursor(r)` | a byte-mode `cursor.Reader` over `r`, for `bytescan.NewWithCursor` |
 | `Text(s)` | the rule text for the bytes of `s`: `core.Literal(bytesource.Text("\xff\xd8"))` matches the bytes `FF D8` |
 | `Bytes(text)` | the bytes of a token's text, the inverse of `Text` |
 | `AnyByte` | the class of every byte, for compositions of core classes |
@@ -73,9 +73,8 @@ in bytes, in decimal. `BYTES` are its first 16 bytes in hex, followed by `...`
 when the token is longer. The view prints byte offsets, not the
 `LINE:COLUMN` of the text view: the cursor counts a line at every 0x0A byte.
 Because each byte is one rune, `Token.Offset()` and `Token.Len()` are byte
-offsets and byte lengths. `Token.ByteOffset()` and `Span.Bytes()` count the
-cursor's UTF-8 encoding of the runes, where a byte of 0x80 or above takes two
-bytes, so they are not file offsets.
+offsets and byte lengths. The cursor counts bytes, so `Token.ByteOffset()` and
+`Span.Bytes()` are the same file offsets and lengths.
 
 ## The drivers
 
@@ -96,7 +95,7 @@ the rest of the queue is dropped. A field of length 0 gives no token.
 | mp3 | start, tag, audio | `ID3_FRAME_BODY`, `ID3_PADDING`, `FRAME_BODY` |
 
 Every driver follows the three rules of a
-[mode driver](../README.md#modes-several-scanners-over-one-cursor):
+[mode driver](../docs/standard.md#modes-several-scanners-over-one-cursor):
 
 1. **Release on every switch.** `modes.Driver.Use` calls `Release()` on the
    outgoing scanner at every mode switch, and the driver calls it on the active

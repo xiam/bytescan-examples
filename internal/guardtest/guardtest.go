@@ -12,9 +12,9 @@ import (
 	"testing"
 
 	"github.com/xiam/bytescan"
+	"github.com/xiam/bytescan/cursor"
 	"github.com/xiam/bytescan/rules/core"
 	"github.com/xiam/bytescan/streamtest"
-	"github.com/xiam/textreader"
 )
 
 // Filler returns a record function that writes 1 KiB of random bytes per
@@ -60,18 +60,18 @@ const Probe bytescan.TokenType = "PROBE"
 // length of any rune: the candidate that grows past the guard, which no rule
 // of a bounded example has. Then it calls next, the Next of the driver, until
 // lx has run on input longer than the guard, and fails t unless that ends in
-// an error that matches textreader.ErrRetentionExceeded before a token of
+// an error that matches cursor.ErrRetentionExceeded before a token of
 // more than guard bytes, or the end of the input, comes out.
 func Active(t *testing.T, lx *bytescan.Scanner, guard int, next func() (*bytescan.Token, error)) {
 	t.Helper()
 	lx.MustAddRule(Probe, core.RuneRun(core.AnyRune))
 	for {
 		l, err := next()
-		if errors.Is(err, textreader.ErrRetentionExceeded) {
+		if errors.Is(err, cursor.ErrRetentionExceeded) {
 			return
 		}
 		if err != nil {
-			t.Fatalf("Next: %v, want an error that matches textreader.ErrRetentionExceeded", err)
+			t.Fatalf("Next: %v, want an error that matches cursor.ErrRetentionExceeded", err)
 		}
 		if l.Len() > guard {
 			t.Fatalf("%s token of %d bytes passed the guard of %d bytes", l.Type(), l.Len(), guard)

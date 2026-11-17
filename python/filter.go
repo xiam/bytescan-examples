@@ -4,7 +4,7 @@ import (
 	"io"
 
 	"github.com/xiam/bytescan"
-	"github.com/xiam/textreader"
+	"github.com/xiam/bytescan/cursor"
 )
 
 // lineFilter applies the line structure of the Python language reference
@@ -39,7 +39,7 @@ type lineFilter struct {
 	indent   int   // indentation of the logical line, once measured
 
 	pending []*bytescan.Token // tokens to return before reading more
-	end     textreader.Pos    // end of the last token read
+	end     cursor.Pos        // end of the last token read
 	eof     bool
 }
 
@@ -125,7 +125,7 @@ func (f *lineFilter) read() error {
 
 // indentation queues the INDENT or DEDENTs that start a logical line whose
 // first token starts at pos.
-func (f *lineFilter) indentation(pos textreader.Pos) {
+func (f *lineFilter) indentation(pos cursor.Pos) {
 	top := f.levels[len(f.levels)-1]
 	if f.indent > top {
 		f.levels = append(f.levels, f.indent)

@@ -1,7 +1,7 @@
 # korean
 
 An illustrative Korean word splitter built only from `rules/base`. It follows
-the [example standard](../README.md) and splits a few sample
+the [example standard](../docs/standard.md) and splits a few sample
 sentences into words, numbers and punctuation, as
 [UAX #29](https://www.unicode.org/reports/tr29/) describes word boundaries.
 

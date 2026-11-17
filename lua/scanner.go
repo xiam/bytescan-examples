@@ -6,9 +6,9 @@ import (
 	"strings"
 
 	"github.com/xiam/bytescan"
+	"github.com/xiam/bytescan/cursor"
 	"github.com/xiam/bytescan/rules/base"
 	"github.com/xiam/bytescan/rules/core"
-	"github.com/xiam/textreader"
 )
 
 // The token types, named after the token classes of the Lua 5.4 reference
@@ -35,7 +35,7 @@ const (
 // newScanner returns a Lua scanner that reads r: a mode driver over one cursor,
 // with a code-mode scanner and a scanner per long-bracket level.
 func newScanner(r io.Reader) *driver {
-	return newCursorScanner(textreader.New(bufio.NewReader(r)))
+	return newCursorScanner(cursor.New(bufio.NewReader(r)))
 }
 
 // newCursorScanner returns the Lua scanner over cur.

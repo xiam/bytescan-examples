@@ -13,11 +13,18 @@ import (
 	"github.com/xiam/bytescan/streamtest"
 )
 
-// TestGuard checks that the per-token guard of the scanners is the harness's
-// guard for the byte adapter on input with bytes of 0x80 or above.
+// TestGuard checks the per-token guard of the scanners: the longest read of
+// a rule, a size with the lookahead of sizePairRule (two sizes of
+// maxSizeDigits digits, two runs of maxRun blanks and the CRLF, 2022 bytes),
+// rounded up to a multiple of streamtest.ByteGuard.
 func TestGuard(t *testing.T) {
-	if tokenGuard != 2*streamtest.ByteGuard {
-		t.Fatalf("tokenGuard = %d, want 2*streamtest.ByteGuard (%d)", tokenGuard, 2*streamtest.ByteGuard)
+	sizePair := 2*maxSizeDigits + 2*maxRun + len("\r\n")
+	if sizePair != 2022 {
+		t.Fatalf("the lookahead of sizePairRule reads %d bytes, want 2022", sizePair)
+	}
+	want := (sizePair + streamtest.ByteGuard - 1) / streamtest.ByteGuard * streamtest.ByteGuard
+	if tokenGuard != want {
+		t.Fatalf("tokenGuard = %d, want %d: %d bytes rounded up to a multiple of streamtest.ByteGuard (%d)", tokenGuard, want, sizePair, streamtest.ByteGuard)
 	}
 }
 
@@ -256,8 +263,8 @@ func warmUp() []byte {
 // type that together hold the run, and the next control line lexes as usual.
 // The stream starts with warmUp, so the heap ceiling sees the run and not the
 // first use of a scanner. The runs of the text fields are bytes of 0x80 or
-// above, so the guard is proven not to reject a legal piece of 1000 bytes,
-// which it counts as 2000.
+// above, so the guard is proven not to reject a legal piece of 1000 such
+// bytes.
 func TestUndelimited(t *testing.T) {
 	const n = 16<<10 + 123
 	high := func(i int) byte { return 0x80 + byte(i%0x80) }

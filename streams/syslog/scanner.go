@@ -81,12 +81,11 @@ func format(l *bytescan.Token) string {
 	return streamkit.Quote(l, 0)
 }
 
-// tokenGuard is the per-token byte bound of every scanner: twice
-// streamtest.ByteGuard, because the input has bytes of 0x80 or above and the
-// guard counts each of them as 2 bytes. The longest token of a rule is a
-// piece of maxRun such bytes, 2,000 guard bytes, so the guard never fires on
-// any input.
-const tokenGuard = 2048
+// tokenGuard is the per-token byte bound of every scanner:
+// streamtest.ByteGuard, a little above the largest bounded token in bytes.
+// The longest token of a rule is a piece of maxRun bytes, so the guard never
+// fires on any input.
+const tokenGuard = 1024
 
 // newScanner returns a syslog scanner that reads r: a driver over one byte
 // cursor, with the per-token guard on every scanner.

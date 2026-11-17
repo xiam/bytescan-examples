@@ -71,7 +71,7 @@ func TestLengths(t *testing.T) {
 func TestReleaseBeforePayload(t *testing.T) {
 	file := riff(chunk("fmt ", pcmFormat(1, 8000, 8)), chunk("data", samples(64<<10)), chunk("note", []byte("end")))
 	var got []string
-	for _, l := range streamtest.LexRetained(t, bytesource.NewReader(bytes.NewReader(file)), 1<<10, newDriver) {
+	for _, l := range streamtest.LexRetainedBytes(t, bytes.NewReader(file), 1<<10, newDriver) {
 		got = append(got, string(l.Type()))
 	}
 	want := "RIFF_HEADER FMT_CHUNK_HEADER FMT_CHUNK_PAYLOAD DATA_CHUNK_HEADER DATA_CHUNK_PAYLOAD CHUNK_HEADER CHUNK_PAYLOAD PAD_BYTE"

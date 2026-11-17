@@ -40,11 +40,10 @@ const (
 // size and not the declared length, which may be corrupt.
 const maxPiece = 64 << 10
 
-// tokenGuard is the per-token byte bound of the header scanner: twice
-// streamtest.ByteGuard, because frame headers hold bytes of 0x80 and above,
-// which the guard counts as 2 bytes. The only rule reads 2 bytes, so the
-// guard never fires on any input.
-const tokenGuard = 2048
+// tokenGuard is the per-token byte bound of the header scanner:
+// streamtest.ByteGuard, a little above the largest bounded token in bytes.
+// The only rule reads 2 bytes, so the guard never fires on any input.
+const tokenGuard = 1024
 
 // newScanner returns a WebSocket frame scanner that reads r: a driver over one
 // byte cursor, with a scanner for the frame header, with the per-token guard,

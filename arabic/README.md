@@ -1,7 +1,7 @@
 # arabic
 
 An illustrative Arabic word splitter built from `rules/base` and `rules/core`.
-It follows the [example standard](../README.md) and splits a few
+It follows the [example standard](../docs/standard.md) and splits a few
 sample sentences into words, numbers and punctuation, as
 [UAX #29](https://www.unicode.org/reports/tr29/) describes word boundaries.
 

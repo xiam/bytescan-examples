@@ -127,9 +127,8 @@ func highRun(n int) []byte {
 // TestUndelimitedRun lexes one run of 18 KiB with no delimiter in each field
 // that runs to one. Each lexes as pieces of at most maxRun bytes under the
 // harness ceiling and the per-token guard, and the next message lexes. The MSG
-// and SD_PARAM_VALUE runs have 16.9 KiB of bytes of 0x80 or above, each of which
-// the guard counts as 2 bytes, so the guard is shown not to reject a legal
-// piece.
+// and SD_PARAM_VALUE runs have 16.9 KiB of bytes of 0x80 or above, so the guard
+// is shown not to reject a legal piece of such bytes.
 func TestUndelimitedRun(t *testing.T) {
 	const n = 18 << 10
 	cases := []struct {

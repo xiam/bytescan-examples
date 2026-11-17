@@ -1,7 +1,7 @@
 # spanish
 
 An illustrative Spanish word splitter built only from `rules/base`. It follows
-the [example standard](../README.md) and splits a few sample
+the [example standard](../docs/standard.md) and splits a few sample
 sentences into words, numbers and punctuation. Its word rule approximates the
 word boundaries of [UAX #29](https://www.unicode.org/reports/tr29/) and does not
 implement it; `base.Word` lists the differences.

@@ -83,7 +83,7 @@ func TestReleaseBeforeData(t *testing.T) {
 	data := bytes.Repeat([]byte("PK\x05\x06\xff"), 64<<10/5)
 	archive := writeRaw(t, "", rawFile{name: "big", method: zip.Store, data: data, plain: data})
 	var got []string
-	for _, l := range streamtest.LexRetained(t, bytesource.NewReader(bytes.NewReader(archive)), 1<<10, newDriver) {
+	for _, l := range streamtest.LexRetainedBytes(t, bytes.NewReader(archive), 1<<10, newDriver) {
 		got = append(got, string(l.Type()))
 	}
 	want := "LOCAL_FILE_HEADER FILE_NAME FILE_DATA CENTRAL_DIRECTORY_HEADER FILE_NAME END_OF_CENTRAL_DIRECTORY"

@@ -8,7 +8,6 @@ import (
 	"github.com/xiam/bytescan-examples/internal/guardtest"
 	"github.com/xiam/bytescan-examples/internal/hexdump"
 	"github.com/xiam/bytescan-examples/internal/lexdump"
-	"github.com/xiam/bytescan/bytesource"
 	"github.com/xiam/bytescan/streamtest"
 )
 
@@ -103,7 +102,7 @@ func TestLengthValue(t *testing.T) {
 // Without the Release, the checkpoint of the length scanner would pin them and
 // the cursor would fail.
 func TestReleaseBeforeRead(t *testing.T) {
-	ls := streamtest.LexRetained(t, bytesource.NewReader(bytes.NewReader(bigPublish())), 1<<10, func(cur bytescan.Cursor) *driver {
+	ls := streamtest.LexRetainedBytes(t, bytes.NewReader(bigPublish()), 1<<10, func(cur bytescan.Cursor) *driver {
 		return newDriver(cur, bytescan.WithMaxTokenBytes(tokenGuard))
 	})
 	if n := len(ls); n != 8 {

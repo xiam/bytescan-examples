@@ -6,9 +6,9 @@ import (
 	"unicode"
 
 	"github.com/xiam/bytescan"
+	"github.com/xiam/bytescan/cursor"
 	"github.com/xiam/bytescan/rules/base"
 	"github.com/xiam/bytescan/rules/core"
-	"github.com/xiam/textreader"
 )
 
 // The token types. The names follow the ECMAScript lexical grammar where it
@@ -40,7 +40,7 @@ const (
 // regular expression, and where "}" closes a substitution or not) and a
 // template-mode scanner.
 func newScanner(r io.Reader) *driver {
-	return newDriver(textreader.New(bufio.NewReader(r)))
+	return newDriver(cursor.New(bufio.NewReader(r)))
 }
 
 // keywords are the reserved words of ECMAScript 2024, section 12.7.2, the

@@ -96,11 +96,31 @@ func contiguous(t *testing.T, pos *int64, fn func(*bytescan.Token)) streamtest.O
 	})
 }
 
+// pieceCeiling is the least heap ceiling of the long-run and corruption
+// tests: two pieces. The driver reads a field in pieces of up to maxPiece
+// bytes, and the harness samples the heap while the last token is live, so a
+// sample can hold one full piece in the cursor buffer as well as the token
+// and the cursor's line table. Over the 256 KiB race budget of streamtest
+// (bytescan#87) the growth measured, in 30 runs each, at most 48.2 KiB for
+// the long run, 98.5 KiB for "invalid length" and 101.4 KiB for "any bytes"
+// under the race detector. The 48 KiB race default of the harness held only
+// while the race budget was 64 KiB, over which these tests grew at most
+// 33.8 KiB. Two pieces leave about 27 KiB above the largest measurement.
+// Without the race detector the budget is 512 KiB, the growth at most 48.3,
+// 94.7 and 129.8 KiB, and the harness default of 256 KiB applies.
+const pieceCeiling = 2 * maxPiece
+
+// ceiling returns the heap ceiling for src: the harness default for its
+// budget, but at least pieceCeiling.
+func ceiling(src streamtest.Source) streamtest.Option {
+	return streamtest.WithCeiling(max(streamtest.DefaultCeiling(src.Budget()), pieceCeiling))
+}
+
 // TestLongRun lexes an endless stream of the default budget, or of 1 GiB
-// with -streamtest.long, under the harness ceiling, and checks the tokens
-// against the packets: one FIXED_HEADER and one REMAINING_LENGTH per packet,
-// of every width from 1 to 4 bytes, one VARIABLE_HEADER per PUBLISH, one
-// BODY per other packet with a remaining length above 0, and no UNKNOWN.
+// with -streamtest.long, under the heap ceiling of ceiling, and checks the
+// tokens against the packets: one FIXED_HEADER and one REMAINING_LENGTH per
+// packet, of every width from 1 to 4 bytes, one VARIABLE_HEADER per PUBLISH,
+// one BODY per other packet with a remaining length above 0, and no UNKNOWN.
 //
 //	go test -timeout 0 -run Long ./streams/mqtt -streamtest.long
 func TestLongRun(t *testing.T) {
@@ -110,7 +130,7 @@ func TestLongRun(t *testing.T) {
 		pos    int64
 		widths [maxLengthBytes + 1]int64
 	)
-	res := streamtest.Run(t, newScanner, gen, contiguous(t, &pos, func(l *bytescan.Token) {
+	res := streamtest.Run(t, newScanner, gen, ceiling(gen), contiguous(t, &pos, func(l *bytescan.Token) {
 		if l.Type() == remainingLength {
 			widths[l.Len()]++
 		}
@@ -176,8 +196,8 @@ var anyBytes = func() string {
 //     first run is framed. After it the driver frames packets at whatever
 //     bytes follow, and a corrupt remaining length, up to 268,435,455 bytes,
 //     may read the rest of the stream as fields. The test asserts that lexing
-//     reaches the end of the stream without an error and under the harness
-//     ceiling, and that the tokens cover the stream without a gap.
+//     reaches the end of the stream without an error and under the heap
+//     ceiling of ceiling, and that the tokens cover the stream without a gap.
 func TestCorruption(t *testing.T) {
 	t.Run("invalid length", func(t *testing.T) {
 		var c tally
@@ -189,7 +209,7 @@ func TestCorruption(t *testing.T) {
 			have    bool
 			garbage int64 // UNKNOWN tokens inside garbage
 		)
-		res := streamtest.Run(t, newScanner, src, contiguous(t, &pos, func(l *bytescan.Token) {
+		res := streamtest.Run(t, newScanner, src, ceiling(src), contiguous(t, &pos, func(l *bytescan.Token) {
 			off := int64(l.Offset())
 			if !have || off >= in.Offset+int64(in.Len) {
 				in, have = src.NextInjection()
@@ -237,7 +257,7 @@ func TestCorruption(t *testing.T) {
 			headers int64 // FIXED_HEADER tokens before the first garbage run
 			after   int64 // tokens from the first garbage run on
 		)
-		res := streamtest.Run(t, newScanner, src, contiguous(t, &pos, func(l *bytescan.Token) {
+		res := streamtest.Run(t, newScanner, src, ceiling(src), contiguous(t, &pos, func(l *bytescan.Token) {
 			if !have {
 				first, have = src.NextInjection()
 			}

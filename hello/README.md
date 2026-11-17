@@ -2,7 +2,7 @@
 
 The text example of the [README](https://github.com/xiam/bytescan/blob/master/README.md#example-text) as a
 program: the keyword `say` and words, built from `rules/core` and
-`rules/base`. It follows the [example standard](../README.md).
+`rules/base`. It follows the [example standard](../docs/standard.md).
 
 **Technique:** a keyword registered before the word rule that also matches
 it, and a `Dumper` that skips layout.

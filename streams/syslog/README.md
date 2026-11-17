@@ -148,15 +148,14 @@ multi-byte UTF-8 in `MSG`, and `LF` inside octet-counted messages.
   then the frames after its line.
 - `TestCorruptLength` frames the stream with a length of 9,999,999,999 bytes.
 
-Every scanner has a per-token guard of 2,048 bytes (twice
-`streamtest.ByteGuard`, because the guard counts a byte of `0x80` or above as
-2 bytes), in `newScanner` itself, so `go run` is guarded too. The guard is a
-safety net: every rule is bounded, the longest token is a piece of 1000 such
-bytes (2,000 guard bytes), and no input reaches the guard. `TestGuard` shows
+Every scanner has a per-token guard of 1,024 bytes (`streamtest.ByteGuard`,
+which counts bytes), in `newScanner` itself, so `go run` is guarded too. The
+guard is a safety net: every rule is bounded, the longest token is a piece of
+1000 bytes, and no input reaches the guard. `TestGuard` shows
 both sides on the production constructor: a newline-ended message that never
 ends keeps producing `MSG` pieces of at most 1000 bytes, with no guard error
 and memory under the harness ceiling, and a rule added in the test that grows
-past the guard fails `Next` with `textreader.ErrRetentionExceeded`. The first messages of a stream grow the live heap
+past the guard fails `Next` with `cursor.ErrRetentionExceeded`. The first messages of a stream grow the live heap
 once, by about 300 KiB, as the scanners and the cursor allocate on first use; so
 the run tests lex 4 KiB of messages before the run and take the first heap
 sample after them.

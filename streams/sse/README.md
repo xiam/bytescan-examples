@@ -141,7 +141,7 @@ The stream tests (`stream_test.go`) use the harness in
   and checks that it comes out as pieces of at most 1000 runes of one type.
 
 **Ceiling.** The generated lines are short (about 14 bytes), and a
-`textreader` cursor trims its per-line table only once its first 64 KiB buffer
+`cursor.Reader` trims its per-line table only once its first 64 KiB buffer
 is full. Before that trim the table holds about 4,700 lines in two slices
 grown to 128 KiB, above the harness's 48 KiB floor, and a race-detector run
 (64 KiB) never reaches the trim. So the long-run and corruption tests set a

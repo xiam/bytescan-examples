@@ -50,9 +50,8 @@ var (
 )
 
 // tokenGuard is the per-token byte bound of every scanner: streamtest.ByteGuard.
-// The longest token of a rule is a REMAINING_LENGTH of 4 bytes, 8 bytes for
-// the guard, which counts a byte of 0x80 or above as 2, so the guard never
-// fires on any input. VARIABLE_HEADER, PAYLOAD and BODY are read by the
+// The longest token of a rule is a REMAINING_LENGTH of 4 bytes, so the guard
+// never fires on any input. VARIABLE_HEADER, PAYLOAD and BODY are read by the
 // driver, not by a rule.
 const tokenGuard = 1024
 

@@ -5,7 +5,7 @@ of [ECMA-48](https://ecma-international.org/publications-and-standards/standards
 (5th edition) in the 7-bit forms that
 [xterm](https://invisible-island.net/xterm/ctlseqs/ctlseqs.html) and most
 terminals use. It is built only from `rules/core`, and it is part of the
-[example standard](../README.md).
+[example standard](../docs/standard.md).
 
 **Technique:** control data mixed into text. Every escape sequence starts with
 the one control rune ESC, so `TEXT` is the complement of the controls and the
