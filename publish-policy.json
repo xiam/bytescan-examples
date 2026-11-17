@@ -1,0 +1,10 @@
+{
+  "blocked_paths": [
+    ".gitattributes"
+  ],
+  "published_branches": [
+    "main"
+  ],
+  "schema_version": 2,
+  "source_hash": "sha256:dfe4bedbb2aa706c6dc987699886d240675f0b99108c8b211a8fae12f57b4cb8"
+}
