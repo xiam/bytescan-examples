@@ -1,0 +1,8 @@
+event: delta
+data: {"name": "split",
+: a comment between two data lines of one document
+data:  "items": [1, 2.5,
+x-trace: 7f3a
+data:   -3e2, true],
+data:  "done": false}
+

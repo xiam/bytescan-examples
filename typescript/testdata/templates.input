@@ -1,0 +1,12 @@
+`text only`
+``
+`a $ b $$ c \` \${not} \\`
+`line one
+line two`
+`a${b}c`
+`${ {a: 1}.a }`
+`x ${ f({k: {v: 1}}) } y`
+`outer ${ `inner ${ `deepest ${x}` } end` } done`
+`${a}${b}`
+`${ `${ `${ `${ 1 }` }` }` }`
+`${ x }` / 2

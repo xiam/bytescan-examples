@@ -1,0 +1,4 @@
+'single' 'it\'s' 'back\\slash' 'no #{interpolation}' ''
+'two
+lines'
+'never closed

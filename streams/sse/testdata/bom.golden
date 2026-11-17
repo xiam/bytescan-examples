@@ -1,0 +1,7 @@
+1:0 BOM "\ufeff"
+1:1 DATA "data"
+1:5 COLON ":"
+1:6 SPACE " "
+1:7 VALUE "first"
+1:12 EOL "\n"
+2:0 EVENT_END "\n"

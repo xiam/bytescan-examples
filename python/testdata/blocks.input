@@ -1,0 +1,11 @@
+def f(x):
+    if x:
+        while x:
+            x -= 1
+    return x
+
+
+class C:
+    def m(self):
+        pass
+print(f(3))

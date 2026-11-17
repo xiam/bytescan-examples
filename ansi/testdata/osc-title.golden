@@ -1,0 +1,4 @@
+1:0 OSC "\x1b]0;build: main\a"
+1:16 OSC "\x1b]2;\a"
+1:21 TEXT "compiling"
+1:30 LF "\n"

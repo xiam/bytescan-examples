@@ -1,0 +1,9 @@
+doc = """first line
+  second line with 'quotes' and "one" ""two""
+"""
+raw = r'''C:\path
+'''
+b = b"""x"""  # same line
+quote = """ends with a quote\""""
+empty = ''''''
+four = """x""""

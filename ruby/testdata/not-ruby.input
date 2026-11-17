@@ -1,0 +1,7 @@
+`ls` \ é = ñ /regex/ ?a $1 $! @1 @@ $ :
+=begin
+x
+=end
+%x(ls) %r{a} %W[a] % w[a] %w a %q\a\
+<<1 << A <<"A B"
+__END__

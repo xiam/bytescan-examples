@@ -1,0 +1,4 @@
+s = 'unterminated
+t = "also
+u = '''never closed
+v = 1

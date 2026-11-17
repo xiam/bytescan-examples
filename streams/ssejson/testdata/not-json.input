@@ -1,0 +1,4 @@
+data: <html>, \x41 'single' 01 1. -.5 tru nul
+data: "bad \q escape \u12G4 and  raw"
+data: {"ok": true}
+

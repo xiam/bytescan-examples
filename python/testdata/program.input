@@ -1,0 +1,31 @@
+"""A small module."""
+
+import sys
+from collections import defaultdict
+
+
+def word_counts(lines, *, min_len=1):
+    """Count the words of each line."""
+    counts = defaultdict(int)
+    for line in lines:
+        for word in line.split():
+            if len(word) >= min_len:  # skip short words
+                counts[word.lower()] += 1
+    return dict(sorted(counts.items(),
+                       key=lambda kv: (-kv[1], kv[0])))
+
+
+class Report:
+    limit: int = 10
+
+    def __init__(self, counts):
+        self.counts = counts
+
+    def lines(self):
+        for word, n in list(self.counts.items())[:self.limit]:
+            yield f"{word:>12} {n}"
+
+
+if __name__ == "__main__":
+    report = Report(word_counts(sys.stdin, min_len=0x2))
+    print(*report.lines(), sep="\n")

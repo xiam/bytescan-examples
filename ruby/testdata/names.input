@@ -1,0 +1,4 @@
+name _private empty? save! a!=b a?==b Foo FOO_BAR Foo::Bar
+@ivar @@cvar $global @_x
+:sym :Sym :empty? :save! :@a ::Top
+{key: 1, if: 2, Key: 3} a ? b : c

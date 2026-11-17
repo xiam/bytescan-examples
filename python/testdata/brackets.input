@@ -1,0 +1,15 @@
+total = (1 +
+         2)
+items = [
+    "a",  # first
+
+  "b",
+]
+d = {
+"k": [1,
+      2],
+    }
+if d:
+    call(a,
+  b)
+    done()

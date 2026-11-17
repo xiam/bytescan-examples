@@ -1,0 +1,28 @@
+INFO {"server_id":"NCXYZ","version":"2.10.4","proto":1,"headers":true,"max_payload":1048576}
+CONNECT {"verbose":true,"pedantic":false,"name":"orders","lang":"go","version":"1.31.0","protocol":1,"headers":true}
++OK
+SUB orders.> 1
+SUB orders.eu workers 2
+PUB orders.eu.42 11
+hello world
+PUB orders.eu.43 _INBOX.k3Dz.1 4
+ping
+HPUB orders.eu.44 _INBOX.k3Dz.2 22 27
+NATS/1.0
+Trace: on
+
+hello
+MSG orders.eu.42 1 11
+hello world
+MSG orders.eu.43 2 _INBOX.k3Dz.1 4
+ping
+HMSG orders.eu.44 1 _INBOX.k3Dz.2 23 28
+NATS/1.0
+Trace: on
+
+hello
+PING
+PONG
+UNSUB 2 10
+UNSUB 1
+-ERR 'Permissions Violation for Publish to orders.us'

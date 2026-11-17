@@ -1,0 +1,9 @@
+a = [[level 0]]
+b = [=[level 1]=]
+c = [===[level 3]===]
+d = [[]]
+e = [[again level 0, from the cached lexer]]
+f = [==[
+spans
+lines
+]==]

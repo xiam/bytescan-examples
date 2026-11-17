@@ -1,0 +1,32 @@
+// A small module with each kind of token.
+import { readFile } from "node:fs/promises";
+
+export interface Entry {
+  readonly name: string;
+  size?: number;
+}
+
+type Size = Entry["size"];
+
+/* Splits a path and keeps
+   the last part. */
+export function base(path: string): string {
+  const parts = path.split(/[\\/]+/);
+  return parts[parts.length - 1] ?? '';
+}
+
+export async function report(entries: Entry[]) {
+  let total = 0n;
+  for (const e of entries) {
+    total += BigInt(e.size ?? 0);
+  }
+  const mean = Number(total) / entries.length;
+  return `${entries.length} files, mean ${mean.toFixed(2)} bytes`;
+}
+
+const isHex = (s: string) => /^0x[0-9a-f]+$/i.test(s);
+const mask = 0xff_ff & 0b1010;
+@sealed
+class Box<T> {
+  private value?: T;
+}

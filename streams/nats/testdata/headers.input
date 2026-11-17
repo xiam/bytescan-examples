@@ -1,0 +1,16 @@
+HMSG h.both 1 18 22
+NATS/1.0
+A: 1
+
+body
+HMSG h.only 2 _R.1 16 16
+NATS/1.0 503
+
+
+HMSG h.cut 3 30 8
+NATS/1.0
+HPUB h.trailing 12 17 
+NATS/1.0
+
+hello
+PONG

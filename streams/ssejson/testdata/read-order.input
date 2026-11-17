@@ -1,0 +1,5 @@
+data: {"a": 1}
+
+event: next
+data: [true]
+

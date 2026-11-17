@@ -1,0 +1,4 @@
+1:0 WORD "hello"
+1:5 SPACE " "
+1:6 WORD "world"
+1:11 SPACE "\n"

@@ -1,0 +1,4 @@
+"double" 'single' "" ''
+"it's" 'say "hi"' "esc \" \\ \n \t é \x41 \q"
+'esc \' and \\'
+"héllo wörld 日本語"

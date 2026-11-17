@@ -1,0 +1,7 @@
+1:0 IDENTIFIER "a"
+1:1 WHITESPACE " "
+1:2 OPERATOR "="
+1:3 WHITESPACE " "
+1:4 HEREDOC_OPEN "<<~EOS"
+1:10 NEWLINE "\n"
+2:0 HEREDOC_BODY "  body\n  EO\n  never closed\n"

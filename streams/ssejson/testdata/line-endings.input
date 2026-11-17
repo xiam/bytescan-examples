@@ -1,0 +1,5 @@
+event: crlf
+data: {"a":
+data: [1, 2]}
+
+event: crdata: "x\ty"

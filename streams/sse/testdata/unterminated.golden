@@ -1,0 +1,4 @@
+1:0 DATA "data"
+1:4 COLON ":"
+1:5 SPACE " "
+1:6 VALUE "no line end at the end of the stream"
