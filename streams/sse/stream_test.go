@@ -80,7 +80,7 @@ func eventRecord(rng *rand.Rand, i int, dst []byte) []byte {
 }
 
 // lineTableCeiling is the heap ceiling of one cursor over the generated
-// stream when it is above the harness default. A textreader cursor trims its
+// stream when it is above the harness default. A cursor.Reader trims its
 // per-line table only once its first 64 KiB buffer is full, and keeps two
 // int slices with one entry per line, grown by doubling. The generated lines
 // are short (about 14 bytes on average), so one buffer holds about 4,700

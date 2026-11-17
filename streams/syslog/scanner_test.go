@@ -10,7 +10,6 @@ import (
 	"github.com/xiam/bytescan"
 	"github.com/xiam/bytescan-examples/internal/guardtest"
 	"github.com/xiam/bytescan-examples/internal/lexdump"
-	"github.com/xiam/bytescan/bytesource"
 	"github.com/xiam/bytescan/streamtest"
 )
 
@@ -18,14 +17,14 @@ func TestGolden(t *testing.T) {
 	lexdump.Golden(t, dumper, newScanner)
 }
 
-// TestGuard checks the production guard: it is twice streamtest.ByteGuard;
+// TestGuard checks the production guard: it is streamtest.ByteGuard;
 // a newline-ended message that never ends, a header followed by any bytes
 // but LF, keeps producing MSG pieces of at most maxRun bytes, with no guard
 // error and bounded memory; and a candidate longer than the guard fails Next
 // with the guard error.
 func TestGuard(t *testing.T) {
-	if tokenGuard != 2*streamtest.ByteGuard {
-		t.Fatalf("tokenGuard = %d, want 2*streamtest.ByteGuard (%d)", tokenGuard, 2*streamtest.ByteGuard)
+	if tokenGuard != streamtest.ByteGuard {
+		t.Fatalf("tokenGuard = %d, want streamtest.ByteGuard (%d)", tokenGuard, streamtest.ByteGuard)
 	}
 	gen := streamtest.NewGenerator(80, guardtest.Filler('\n'))
 	guardtest.Bounded(t, newScanner, streamtest.Prefix(gen, []byte("<1>1 - - - - - ")), maxRun, msg)
@@ -96,7 +95,7 @@ func TestMsgPieces(t *testing.T) {
 func TestReleaseBeforeRead(t *testing.T) {
 	m := "<1>1 - - - - - - " + strings.Repeat("y", maxPiece)
 	input := strconv.Itoa(len(m)) + " " + m + "<1>1 - - - - - - z\n"
-	ls := streamtest.LexRetained(t, bytesource.NewReader(strings.NewReader(input)), 1<<10, func(cur bytescan.Cursor) *driver {
+	ls := streamtest.LexRetainedBytes(t, strings.NewReader(input), 1<<10, func(cur bytescan.Cursor) *driver {
 		return newDriver(cur, bytescan.WithMaxTokenBytes(tokenGuard))
 	})
 	n := 0

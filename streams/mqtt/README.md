@@ -68,7 +68,7 @@ fields. `CONTINUATION` and `LENGTH_END` are internal types; the output never
 shows them.
 
 The driver follows the three rules of a
-[mode driver](../../README.md#modes-several-scanners-over-one-cursor):
+[mode driver](../../docs/standard.md#modes-several-scanners-over-one-cursor):
 
 1. **Release on every switch.** `modes.Driver` calls `Release()` on the
    outgoing scanner at every switch, and after a `REMAINING_LENGTH` the driver
@@ -135,7 +135,7 @@ Not covered:
 
 The tests use the stream harness
 [`streamtest`](https://github.com/xiam/bytescan/tree/master/streamtest) (see
-[Long-running streams](../../README.md#long-running-streams)).
+[Long-running streams](../../docs/streams.md)).
 The generator writes one packet per record: `CONNECT`, `PUBLISH` at QoS 0, 1
 and 2 (half of the packets), `PUBACK`, `SUBSCRIBE`, `PINGREQ` and `PINGRESP`.
 Payloads take every byte value; one `PUBLISH` in 512 has a payload of 16 KiB
@@ -145,21 +145,20 @@ writing 2 MiB packets.
 
 Every scanner has a per-token guard of 1,024 bytes, `streamtest.ByteGuard`, in
 `newScanner` itself, so `go run` is guarded too. The guard is a safety net: the
-longest token of a rule is a 4-byte `REMAINING_LENGTH`, which the guard
-counts as at most 8 bytes, and the fields are read by the driver in pieces,
-so no input reaches the guard.
+longest token of a rule is a 4-byte `REMAINING_LENGTH`, and the fields are
+read by the driver in pieces, so no input reaches the guard.
 
 | Test | Shows |
 | --- | --- |
 | `TestGolden` | each `testdata` input against its golden file |
-| `TestGuard` | the production guard: a `CONNECT` with the maximal remaining length followed by 256 KiB of any bytes keeps producing `BODY` pieces of at most 64 KiB, with no guard error and memory under the harness ceiling; a rule added in the test that grows past the guard fails `Next` with `textreader.ErrRetentionExceeded` |
+| `TestGuard` | the production guard: a `CONNECT` with the maximal remaining length followed by 256 KiB of any bytes keeps producing `BODY` pieces of at most 64 KiB, with no guard error and memory under the harness ceiling; a rule added in the test that grows past the guard fails `Next` with `cursor.ErrRetentionExceeded` |
 | `TestInputs` | each `testdata` input equals the bytes built in `inputs_test.go` |
 | `TestPieces` | a `PUBLISH` with a 65,539-byte variable header and a 70,000-byte payload: two pieces each, at most 64 KiB, then the next packet |
 | `TestLengthValue` | the value of a remaining length against the examples of section 2.2.3 |
 | `TestReleaseBeforeRead` | rule 1 of the driver, with a cursor whose retention is bounded to 1 KiB |
-| `TestLongRun` | one `FIXED_HEADER` and one `REMAINING_LENGTH` per packet, every width from 1 to 4 bytes, one `VARIABLE_HEADER` per `PUBLISH`, one `BODY` per other packet with a length above 0, no `UNKNOWN`, the tokens without a gap, memory under the harness ceiling |
-| `TestCorruption/invalid_length` | garbage runs that lex as an invalid remaining length: a `FIXED_HEADER` and `UNKNOWN` bytes, then every packet after it framed again |
-| `TestCorruption/any_bytes` | garbage runs of random bytes: every packet before the first run is framed; after it the driver frames packets at the wrong bytes, and lexing reaches the end of the stream without an error, without a gap and under the harness ceiling |
+| `TestLongRun` | one `FIXED_HEADER` and one `REMAINING_LENGTH` per packet, every width from 1 to 4 bytes, one `VARIABLE_HEADER` per `PUBLISH`, one `BODY` per other packet with a length above 0, no `UNKNOWN`, the tokens without a gap, memory under the harness ceiling but at least two pieces (128 KiB) |
+| `TestCorruption/invalid_length` | garbage runs that lex as an invalid remaining length: a `FIXED_HEADER` and `UNKNOWN` bytes, then every packet after it framed again, memory under the harness ceiling but at least two pieces (128 KiB) |
+| `TestCorruption/any_bytes` | garbage runs of random bytes: every packet before the first run is framed; after it the driver frames packets at the wrong bytes, and lexing reaches the end of the stream without an error, without a gap and under the harness ceiling but at least two pieces (128 KiB) |
 | `TestMaxLength` | a `CONNECT` and a `PUBLISH` whose remaining length is 268,435,455 bytes before a much shorter stream: the rest of the stream is read as pieces of at most 64 KiB, under the harness ceiling |
 | `TestHighRun` | a run of 18 KiB of `0xFF` where a packet starts: one `FIXED_HEADER`, then one `UNKNOWN` per byte, under the harness ceiling and the guard |
 

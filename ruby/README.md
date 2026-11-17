@@ -5,7 +5,7 @@ A Ruby scanner for a documented subset of the
 mainly [literals](https://docs.ruby-lang.org/en/3.3/syntax/literals_rdoc.html)
 (strings, percent literals, here documents), built from `rules/core` and
 `rules/base`. It is a mode-driver example (see
-[Modes](../README.md#modes-several-scanners-over-one-cursor)), with
+[Modes](../docs/standard.md#modes-several-scanners-over-one-cursor)), with
 the [Lua example](../lua) as its reference.
 
 **Technique:** three constructs that no single rule set can lex, each lexed by

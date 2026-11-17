@@ -2,7 +2,7 @@
 
 An illustrative splitter of Japanese text into script runs, built from
 `rules/base` and `rules/core`. It follows the
-[example standard](../README.md) and uses the Unicode
+[example standard](../docs/standard.md) and uses the Unicode
 [Script property](https://www.unicode.org/reports/tr24/).
 
 **Technique:** script runs where words have no spaces.

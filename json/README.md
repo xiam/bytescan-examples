@@ -2,7 +2,7 @@
 
 A JSON scanner for [RFC 8259](https://www.rfc-editor.org/rfc/rfc8259), built
 from `rules/core` and the string and number rules of `rules/base`. It is the
-reference example of the [example standard](../README.md).
+reference example of the [example standard](../docs/standard.md).
 
 **Technique:** a strict token grammar from a string with checked escapes
 (`base.QuotedWith`) and base number options, and letting the longest match

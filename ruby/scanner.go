@@ -5,9 +5,9 @@ import (
 	"io"
 
 	"github.com/xiam/bytescan"
+	"github.com/xiam/bytescan/cursor"
 	"github.com/xiam/bytescan/rules/base"
 	"github.com/xiam/bytescan/rules/core"
-	"github.com/xiam/textreader"
 )
 
 // The token types. The code-mode scanners emit the tokens of code and the
@@ -53,7 +53,7 @@ const (
 // double-quoted string, and a scanner per percent-literal delimiter and per
 // heredoc terminator, built when the driver first needs it.
 func newScanner(r io.Reader) *driver {
-	return newDriver(textreader.New(bufio.NewReader(r)))
+	return newDriver(cursor.New(bufio.NewReader(r)))
 }
 
 // keywords are the 41 reserved words of the Ruby documentation, "Keywords"

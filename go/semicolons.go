@@ -5,7 +5,7 @@ import (
 	"strings"
 
 	"github.com/xiam/bytescan"
-	"github.com/xiam/textreader"
+	"github.com/xiam/bytescan/cursor"
 )
 
 // semicolons is a filter above the Next method of a scanner. It inserts a
@@ -38,7 +38,7 @@ type semicolons struct {
 	// insert reports whether the last token read ends a line with a semicolon.
 	insert bool
 	// end is the end of the last token read.
-	end textreader.Pos
+	end cursor.Pos
 	// pending is a token read from lx and held back behind an inserted
 	// semicolon.
 	pending *bytescan.Token
@@ -121,7 +121,7 @@ func endsStatement(l *bytescan.Token) bool {
 }
 
 // inserted returns an inserted SEMICOLON at p.
-func inserted(p textreader.Pos) *bytescan.Token {
+func inserted(p cursor.Pos) *bytescan.Token {
 	return bytescan.NewEmptyToken(semicolon, p)
 }
 

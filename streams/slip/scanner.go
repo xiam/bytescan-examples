@@ -31,12 +31,12 @@ const (
 // bytes does not grow one token without bound.
 const maxRun = 1000
 
-// tokenGuard is the per-token byte bound of the scanner: twice
-// streamtest.ByteGuard, because the guard counts a byte of 0x80 or above as 2
-// bytes and a DATA piece of maxRun such bytes counts 2,000. Every rule is
-// bounded, so the guard never fires on any input; it turns a rule that scans
-// without bound into an error instead of a growing heap.
-const tokenGuard = 2048
+// tokenGuard is the per-token byte bound of the scanner:
+// streamtest.ByteGuard, a little above the largest bounded token in bytes, a
+// DATA piece of maxRun bytes. Every rule is bounded, so the guard never fires
+// on any input; it turns a rule that scans without bound into an error
+// instead of a growing heap.
+const tokenGuard = 1024
 
 // dataByte is the class of the bytes that a frame carries as they are: every
 // byte but END and ESC.

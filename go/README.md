@@ -3,7 +3,7 @@
 A scanner for Go source code that follows the
 [Go specification](https://go.dev/ref/spec), sections "Lexical elements" and
 "Semicolons". It is built only from `rules/core` and `rules/base`, and it
-follows the [example standard](../README.md).
+follows the [example standard](../docs/standard.md).
 
 **Technique:** a token filter above `Next()` that inserts the semicolons of
 the specification, and a differential test against a reference tokenizer,

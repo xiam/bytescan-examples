@@ -5,7 +5,7 @@ A scanner for the lexical elements of standard SQL, after
 (5.2 `<token>` and `<separator>`, 5.3 `<literal>`). The public BNF of
 [SQL-92](https://ronsavage.github.io/SQL/sql-92.bnf.html) and
 [SQL:2003](https://ronsavage.github.io/SQL/sql-2003-2.bnf.html) gives the same
-forms. It follows the [example standard](../README.md).
+forms. It follows the [example standard](../docs/standard.md).
 
 **Technique:** keywords that ignore case, competing with identifiers. A
 reserved word matches in any letter case, never as the start of a longer

@@ -2,7 +2,7 @@
 
 A scanner for [Whitespace](https://compsoc.dur.ac.uk/whitespace/), the esoteric
 language whose only tokens are space, tab and line feed. It is built only from
-`rules/core`, and it is part of the [example standard](../README.md).
+`rules/core`, and it is part of the [example standard](../docs/standard.md).
 
 **Technique:** the inverted case. The usual skip rule is the only token rule
 here: the three layout characters are the tokens, and all visible text is

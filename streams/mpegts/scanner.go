@@ -28,12 +28,11 @@ const (
 	bodySize = packetSize - 1 - headerSize
 )
 
-// tokenGuard is the per-token byte bound of every scanner: twice
-// streamtest.ByteGuard, because the packets hold bytes of 0x80 and above,
-// which the guard counts as 2 bytes. The longest read of a rule is the
-// confirmed sync of newLostScanner, one packet and a byte (189 bytes, at most
-// 378 guard bytes), so the guard never fires on any input.
-const tokenGuard = 2048
+// tokenGuard is the per-token byte bound of every scanner:
+// streamtest.ByteGuard, a little above the largest bounded token in bytes.
+// The longest read of a rule is the confirmed sync of newLostScanner, one
+// packet and a byte (189 bytes), so the guard never fires on any input.
+const tokenGuard = 1024
 
 // newScanner returns an MPEG transport stream scanner that reads r: a mode driver
 // over one byte cursor, with a scanner for the sync byte, one for the header,

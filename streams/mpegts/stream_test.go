@@ -6,7 +6,6 @@ import (
 	"testing"
 
 	"github.com/xiam/bytescan"
-	"github.com/xiam/bytescan/bytesource"
 	"github.com/xiam/bytescan/streamtest"
 )
 
@@ -229,7 +228,7 @@ func TestCorruption(t *testing.T) {
 func TestReleaseBeforeRead(t *testing.T) {
 	gen := streamtest.NewGenerator(1, record(false), streamtest.WithBudget(64<<10))
 	src := streamtest.Corrupt(gen, 2, 0.2, streamtest.Garbage(garbageAlphabet, 1, 400))
-	ls := streamtest.LexRetained(t, bytesource.NewReader(src), 1<<10, func(cur bytescan.Cursor) *driver {
+	ls := streamtest.LexRetainedBytes(t, src, 1<<10, func(cur bytescan.Cursor) *driver {
 		return newDriver(cur, bytescan.WithMaxTokenBytes(tokenGuard))
 	})
 	if len(ls) == 0 {

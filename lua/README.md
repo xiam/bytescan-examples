@@ -3,7 +3,7 @@
 A Lua scanner for the lexical conventions of the
 [Lua 5.4 reference manual, section 3.1](https://www.lua.org/manual/5.4/manual.html#3.1),
 built from `rules/core` and `rules/base`. It is the first mode-driver example
-(see [Modes](../README.md#modes-several-scanners-over-one-cursor)).
+(see [Modes](../docs/standard.md#modes-several-scanners-over-one-cursor)).
 
 **Technique:** a counted match. A long bracket `[==[ … ]==]` closes only at the
 level of its opener, so no single rule set can lex every level. A mode driver

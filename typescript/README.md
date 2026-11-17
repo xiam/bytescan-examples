@@ -4,7 +4,7 @@ A scanner for a subset of TypeScript: the tokens of the
 [ECMAScript lexical grammar, clause 12](https://tc39.es/ecma262/2024/#sec-ecmascript-language-lexical-grammar)
 and the common TypeScript keywords, built from `rules/core` and `rules/base`.
 It is a mode-driver example (see
-[Modes](../README.md#modes-several-scanners-over-one-cursor)).
+[Modes](../docs/standard.md#modes-several-scanners-over-one-cursor)).
 
 **Technique:** two choices that no single rule set can make, both made by a
 mode driver over one cursor. Whether `/` starts a regular expression or is a

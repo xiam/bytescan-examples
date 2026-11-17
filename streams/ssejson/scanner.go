@@ -5,8 +5,8 @@ import (
 
 	"github.com/xiam/bytescan"
 	"github.com/xiam/bytescan-examples/streams/sse/ssedriver"
+	"github.com/xiam/bytescan/cursor"
 	"github.com/xiam/bytescan/rules/core"
-	"github.com/xiam/textreader"
 )
 
 // The token types of the JSON layer. The structural types are named after
@@ -101,7 +101,7 @@ func newDriver(r io.Reader, opts ...bytescan.Option) *driver {
 	p := newPipe(ssedriver.New(r, opts...))
 	return &driver{
 		pipe:  p,
-		inner: newJSONDriver(textreader.New(p), opts...),
+		inner: newJSONDriver(cursor.New(p), opts...),
 	}
 }
 

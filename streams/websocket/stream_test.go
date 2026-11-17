@@ -6,7 +6,6 @@ import (
 	"testing"
 
 	"github.com/xiam/bytescan"
-	"github.com/xiam/bytescan/bytesource"
 	"github.com/xiam/bytescan/streamtest"
 )
 
@@ -367,7 +366,7 @@ func TestHugeLength(t *testing.T) {
 func TestReleaseBeforeRead(t *testing.T) {
 	g := &generator{}
 	gen := streamtest.NewGenerator(1, g.record, streamtest.WithBudget(64<<10))
-	ls := streamtest.LexRetained(t, bytesource.NewReader(gen), 1<<10, func(cur bytescan.Cursor) *driver {
+	ls := streamtest.LexRetainedBytes(t, gen, 1<<10, func(cur bytescan.Cursor) *driver {
 		return newDriver(cur, bytescan.WithMaxTokenBytes(tokenGuard))
 	})
 	n := int64(0)

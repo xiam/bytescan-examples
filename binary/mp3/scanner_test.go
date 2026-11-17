@@ -85,7 +85,7 @@ func TestReleaseBeforeBody(t *testing.T) {
 		s.frame(mpeg1At320k, nil)
 	}
 	var got []string
-	for _, l := range streamtest.LexRetained(t, bytesource.NewReader(bytes.NewReader(s.b)), 1<<10, newDriver) {
+	for _, l := range streamtest.LexRetainedBytes(t, bytes.NewReader(s.b), 1<<10, newDriver) {
 		got = append(got, string(l.Type()))
 	}
 	want := "ID3_HEADER ID3_FRAME_HEADER ID3_FRAME_BODY" + strings.Repeat(" FRAME_HEADER FRAME_BODY", 4)

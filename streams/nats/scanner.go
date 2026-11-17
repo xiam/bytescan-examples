@@ -45,18 +45,16 @@ const (
 	maxPiece = 64 << 10
 
 	// tokenGuard is the per-token byte bound of every scanner: a little above
-	// the most that a rule reads for one token, lookahead included. The
-	// bound counts the UTF-8 length of each rune, and the byte adapter
-	// returns a byte of 0x80 or above as a rune of two UTF-8 bytes, so a
-	// piece of 1000 such bytes counts as 2000. The longest reads are a field
-	// piece of 1000 such bytes with the lookahead of queueRule (2000 + 40
-	// blanks + 2 = 2042 bytes), and a size with the lookahead of sizePairRule
-	// (10 + 1000 + 10 + 1000 + 2 = 2022 ASCII bytes).
+	// the most that a rule reads for one token, lookahead included, in
+	// bytes. The longest read is a size with the lookahead of sizePairRule
+	// (10 + 1000 + 10 + 1000 + 2 = 2022 bytes). A field piece of 1000 bytes
+	// with the lookahead of queueRule reads at most 1000 + 40 blanks + 2 =
+	// 1042 bytes.
 	tokenGuard = 2048
 
 	// maxQueueBlanks is the most blanks that the lookahead of queueRule reads
-	// after a field. It keeps that rule's read under tokenGuard when the field
-	// is 1000 bytes of 0x80 or above.
+	// after a field. It keeps that rule's read under tokenGuard after a field
+	// piece of 1000 bytes.
 	maxQueueBlanks = 40
 )
 

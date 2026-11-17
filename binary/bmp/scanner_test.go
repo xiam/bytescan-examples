@@ -6,7 +6,6 @@ import (
 
 	"github.com/xiam/bytescan-examples/internal/hexdump"
 	"github.com/xiam/bytescan-examples/internal/lexdump"
-	"github.com/xiam/bytescan/bytesource"
 	"github.com/xiam/bytescan/streamtest"
 )
 
@@ -25,7 +24,7 @@ func TestPixelDataPieces(t *testing.T) {
 	file = append(file, pixels...)
 
 	pieces, sum := 0, 0
-	for _, l := range streamtest.LexRetained(t, bytesource.NewReader(bytes.NewReader(file)), 1<<10, newDriver) {
+	for _, l := range streamtest.LexRetainedBytes(t, bytes.NewReader(file), 1<<10, newDriver) {
 		if l.Type() != pixelData {
 			continue
 		}

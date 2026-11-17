@@ -1,7 +1,7 @@
 # words
 
 A multilingual word scanner built only from `rules/base` and `rules/special`. It
-follows the [example standard](../README.md).
+follows the [example standard](../docs/standard.md).
 
 **Technique:** registration order between overlapping rules, and a `Dumper`
 that skips layout.

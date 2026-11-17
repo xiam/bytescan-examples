@@ -6,7 +6,7 @@ operations of the
 built from `rules/core` over the byte adapter of
 [`bytesource`](https://github.com/xiam/bytescan/tree/master/bytesource). It is a long-running stream
 example (see
-[Long-running streams](../../README.md#long-running-streams)).
+[Long-running streams](../../docs/streams.md)).
 
 **Technique:** text control lines mixed with byte-counted binary payloads on
 one stream. Rules lex each control line; its `SIZE` fields tell the driver how
@@ -54,12 +54,12 @@ tokens of the same type in a row. A digit run of more than 10 digits in the
 place of a size is emitted as `UNKNOWN` pieces of at most 1000 digits, and the
 driver reads no payload after that line (the driver relabels them with
 `Token.WithType`). Every scanner is built with a per-token guard of 2,048 bytes
-(`WithMaxTokenBytes`), which `newScanner` passes to `newDriver`: the guard counts the UTF-8 length
-of each rune, and the byte adapter returns a byte of `0x80` or above as a rune
-of two UTF-8 bytes, so a piece of 1000 such bytes counts as 2,000. The guard
-also counts what a rule reads ahead. The longest read is a field of 1000 such
-bytes with the lookahead of the queue group: 2,000 bytes, at most 40 blanks
-and one more byte, 2,042 bytes in all. `TestLookaheadGuard` checks that read.
+(`WithMaxTokenBytes`), which `newScanner` passes to `newDriver`: the guard counts
+bytes, and it also counts what a rule reads ahead. The longest read is a size
+with the lookahead of the size pair: 10 digits, 1000 blanks, 10 digits, 1000
+blanks and the CRLF, 2,022 bytes in all. A field of 1000 bytes with the
+lookahead of the queue group reads at most 40 blanks and one more byte after
+it, 1,042 bytes. `TestLookaheadGuard` checks both reads.
 
 ## The mode driver
 

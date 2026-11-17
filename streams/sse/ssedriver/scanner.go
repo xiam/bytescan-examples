@@ -5,9 +5,9 @@ import (
 	"io"
 
 	"github.com/xiam/bytescan"
+	"github.com/xiam/bytescan/cursor"
 	"github.com/xiam/bytescan/rules/base"
 	"github.com/xiam/bytescan/rules/core"
-	"github.com/xiam/textreader"
 )
 
 // The token types. The names of the fields that the WHATWG parsing rules act
@@ -94,7 +94,7 @@ var (
 // cursor, with one scanner per mode. Every mode scanner is built with opts, such
 // as bytescan.WithMaxTokenBytes for a per-token guard.
 func New(r io.Reader, opts ...bytescan.Option) *Driver {
-	return newDriver(textreader.New(bufio.NewReader(r)), opts...)
+	return newDriver(cursor.New(bufio.NewReader(r)), opts...)
 }
 
 // newLineScanner returns the scanner for the start of a line: a field name, a

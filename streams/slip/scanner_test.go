@@ -20,17 +20,18 @@ func TestGolden(t *testing.T) {
 	lexdump.Golden(t, hexdump.Dumper, newScanner)
 }
 
-// TestGuard checks the production guard: it is twice streamtest.ByteGuard;
+// TestGuard checks the production guard: it is streamtest.ByteGuard;
 // a stream of data bytes with no END keeps producing DATA pieces of at most
 // maxRun bytes, with no guard error and bounded memory; and a candidate
 // longer than the guard fails Next with the guard error.
 func TestGuard(t *testing.T) {
-	if tokenGuard != 2*streamtest.ByteGuard {
-		t.Fatalf("tokenGuard = %d, want 2*streamtest.ByteGuard (%d)", tokenGuard, 2*streamtest.ByteGuard)
+	if tokenGuard != streamtest.ByteGuard {
+		t.Fatalf("tokenGuard = %d, want streamtest.ByteGuard (%d)", tokenGuard, streamtest.ByteGuard)
 	}
 	guardtest.Bounded(t, newScanner, streamtest.NewGenerator(80, undelimitedRecord()), maxRun, dataType)
 
-	lx := newScanner(bytes.NewReader(bytes.Repeat([]byte{0xFF}, tokenGuard)))
+	// tokenGuard+1 bytes of 0xFF exceed the guard, which counts bytes, by one.
+	lx := newScanner(bytes.NewReader(bytes.Repeat([]byte{0xFF}, tokenGuard+1)))
 	guardtest.Active(t, lx, tokenGuard, lx.Next)
 }
 
@@ -101,7 +102,7 @@ func undelimitedRecord() streamtest.RecordFunc {
 // harness default budget (at least 64 KiB), half of it bytes of 0x80 and
 // above: every token is DATA, every piece but the last is exactly maxRun
 // bytes, memory stays under the harness ceiling, and the per-token guard of
-// 2,048 bytes never rejects a piece of 1,000 high bytes (2,000 guard bytes).
+// 1,024 bytes never rejects a piece of 1,000 high bytes.
 func TestUndelimitedRun(t *testing.T) {
 	gen := streamtest.NewGenerator(55, undelimitedRecord())
 	var (

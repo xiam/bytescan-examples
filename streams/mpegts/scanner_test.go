@@ -18,17 +18,18 @@ func TestGolden(t *testing.T) {
 	lexdump.Golden(t, hexdump.Dumper, newScanner)
 }
 
-// TestGuard checks the production guard: it is twice streamtest.ByteGuard;
+// TestGuard checks the production guard: it is streamtest.ByteGuard;
 // a stream with no sync byte, which never starts a packet, keeps producing
 // UNKNOWN tokens of one byte, with no guard error and bounded memory; and a
 // candidate longer than the guard fails Next with the guard error.
 func TestGuard(t *testing.T) {
-	if tokenGuard != 2*streamtest.ByteGuard {
-		t.Fatalf("tokenGuard = %d, want 2*streamtest.ByteGuard (%d)", tokenGuard, 2*streamtest.ByteGuard)
+	if tokenGuard != streamtest.ByteGuard {
+		t.Fatalf("tokenGuard = %d, want streamtest.ByteGuard (%d)", tokenGuard, streamtest.ByteGuard)
 	}
 	guardtest.Bounded(t, newScanner, streamtest.NewGenerator(80, guardtest.Filler(syncByte)), 1, bytescan.TokenTypeUnknown)
 
-	d := newScanner(bytes.NewReader(bytes.Repeat([]byte{0xFF}, tokenGuard)))
+	// tokenGuard+1 bytes of 0xFF exceed the guard, which counts bytes, by one.
+	d := newScanner(bytes.NewReader(bytes.Repeat([]byte{0xFF}, tokenGuard+1)))
 	guardtest.Active(t, d.sync, tokenGuard, d.Next)
 }
 

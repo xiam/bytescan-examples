@@ -67,7 +67,7 @@ func TestPayloadPieces(t *testing.T) {
 func TestReleaseBeforeRead(t *testing.T) {
 	body := strings.Repeat("payload ", 100<<10/8)
 	in := msg("a", "1", "", body) + "PING\r\n"
-	ls := streamtest.LexRetained(t, bytesource.NewReader(strings.NewReader(in)), 4<<10, func(cur bytescan.Cursor) *driver {
+	ls := streamtest.LexRetainedBytes(t, strings.NewReader(in), 4<<10, func(cur bytescan.Cursor) *driver {
 		return newDriver(cur, bytescan.WithMaxTokenBytes(tokenGuard))
 	})
 	want := "OP SP SUBJECT SP SID SP SIZE CRLF PAYLOAD PAYLOAD CRLF OP CRLF"

@@ -58,7 +58,7 @@ that runs to the end of the input, and memory follows the piece size, not the
 declared length.
 
 The driver follows the three rules of a
-[mode driver](../../README.md#modes-several-scanners-over-one-cursor):
+[mode driver](../../docs/standard.md#modes-several-scanners-over-one-cursor):
 
 1. **Release on every switch.** The driver calls `Release()` on the header
    scanner after every token, before it reads fields or the payload from the
@@ -117,7 +117,7 @@ by the end of the input. This is a design decision of the example.
 
 The tests use the stream harness
 [`streamtest`](https://github.com/xiam/bytescan/tree/master/streamtest) (see
-[Long-running streams](../../README.md#long-running-streams)).
+[Long-running streams](../../docs/streams.md)).
 The generator writes one message per record, from a client (masked frames with
 a random key) or from a server (unmasked frames): text, binary, ping, pong and
 close frames, and one in eight a text or binary message in 2 to 4 fragments
@@ -127,9 +127,8 @@ record 32 of every 256 is a binary frame with a 64-bit length of 65,536 to
 too, has all three widths. The generator records each frame it writes, so a
 test checks the tokens of every frame as they arrive.
 
-The scanner has a per-token guard of 2,048 bytes, `2 * streamtest.ByteGuard`,
-because headers hold bytes of `0x80` and above, in `newScanner` itself, so
-`go run` is guarded too. The guard is a safety net: the only token of a rule
+The scanner has a per-token guard of 1,024 bytes, `streamtest.ByteGuard`, in
+`newScanner` itself, so `go run` is guarded too. The guard counts bytes. The guard is a safety net: the only token of a rule
 is the 2-byte `FRAME_HEADER`, and the fields and the payload are read by the
 driver, so no rule reads more than 2 bytes before it decides, no token runs
 to a delimiter, and no input reaches the guard.
@@ -142,7 +141,7 @@ one piece more than a baseline taken at a small token.
 | Test | Shows |
 | --- | --- |
 | `TestGolden` | each `testdata` input against its golden file |
-| `TestGuard` | the production guard: a frame with the 64-bit length 2^64-1 followed by 256 KiB of any bytes keeps producing `PAYLOAD` pieces of at most 64 KiB, with no guard error and memory under the ceiling; a rule added in the test that grows past the guard fails `Next` with `textreader.ErrRetentionExceeded` |
+| `TestGuard` | the production guard: a frame with the 64-bit length 2^64-1 followed by 256 KiB of any bytes keeps producing `PAYLOAD` pieces of at most 64 KiB, with no guard error and memory under the ceiling; a rule added in the test that grows past the guard fails `Next` with `cursor.ErrRetentionExceeded` |
 | `TestInputs` | each `testdata` input equals the bytes built in `inputs_test.go` |
 | `TestLongRun` | a generated stream of the default budget, or 1 GiB with `-streamtest.long`: every token matches the frame the generator wrote, no `UNKNOWN`, all three length widths, masked and unmasked frames, memory under the ceiling |
 | `TestCorruption` | runs of 1 to 64 random bytes between messages. Every token before the first run matches its frame. From the first run on, the stream cannot be re-framed: the test checks that the tokens cover the stream without a gap, that each has a size the driver gives (a `PAYLOAD` piece at most 64 KiB), and that lexing reaches the end with no error under the ceiling |

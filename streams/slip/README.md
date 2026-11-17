@@ -66,27 +66,26 @@ The framing and the byte stuffing of RFC 1055. Not covered:
 
 The tests use the stream harness
 [`streamtest`](https://github.com/xiam/bytescan/tree/master/streamtest) (see
-[Long-running streams](../../README.md#long-running-streams)).
+[Long-running streams](../../docs/streams.md)).
 The generator writes one frame per record, the way RFC 1055 sends it:
 sometimes an `END` first (an empty frame), then a payload of 0 to 299 bytes,
 or 1,000 to 2,999 bytes for one frame in 16, stuffed, then `END`. Payload
 bytes take every value, and about one in 8 is `END` or `ESC`.
 
-The scanner has a per-token guard of `2 * streamtest.ByteGuard` (2,048 bytes) in
-`newScanner` itself, so `go run` is guarded too. The guard counts the UTF-8
-bytes of the adapter's runes, so a byte of `0x80` or above counts as 2 and a
-`DATA` piece of 1000 such bytes counts as 2,000. That piece is the largest
-token, so the guard is a safety net that no input reaches.
+The scanner has a per-token guard of `streamtest.ByteGuard` (1,024 bytes) in
+`newScanner` itself, so `go run` is guarded too. The guard counts bytes, and a
+`DATA` piece of 1000 bytes is the largest token, so the guard is a safety net
+that no input reaches.
 
 | Test | Shows |
 | --- | --- |
 | `TestGolden` | each `testdata` input against its golden file |
-| `TestGuard` | the production guard: a run with no `END` keeps producing `DATA` pieces of at most 1000 bytes, with no guard error and memory under the harness ceiling; a rule added in the test that grows past the guard fails `Next` with `textreader.ErrRetentionExceeded` |
+| `TestGuard` | the production guard: a run with no `END` keeps producing `DATA` pieces of at most 1000 bytes, with no guard error and memory under the harness ceiling; a rule added in the test that grows past the guard fails `Next` with `cursor.ErrRetentionExceeded` |
 | `TestInputs` | each `testdata` input equals the bytes built in `inputs_test.go` |
 | `TestEscapes` | both escape sequences, empty frames, and each `UNKNOWN` case |
 | `TestLongRun` | a generated stream of frames: the tokens cover the stream without a gap, one `END`, `ESC_END` and `ESC_ESC` token for each the generator wrote, no `UNKNOWN`, long payloads in several `DATA` pieces, memory under the harness ceiling |
 | `TestCorruption` | garbage runs of invalid escapes (`ESC` and a byte that does not finish an escape sequence) between frames: `UNKNOWN` exactly at each `ESC` of the garbage and nowhere else, and the same `END`, `ESC_END` and `ESC_ESC` tokens as the generator wrote, so lexing resumes at the `END` that closes each corrupted frame |
-| `TestUndelimitedRun` | one run of the harness default budget (512 KiB, 64 KiB under the race detector) with no `END` or `ESC`, half of it bytes of `0x80` and above: only `DATA` tokens of exactly 1000 bytes (the last one shorter), memory under the harness ceiling, and the 2,048-byte guard never rejects a piece |
+| `TestUndelimitedRun` | one run of the harness default budget (512 KiB, 64 KiB under the race detector) with no `END` or `ESC`, half of it bytes of `0x80` and above: only `DATA` tokens of exactly 1000 bytes (the last one shorter), memory under the harness ceiling, and the 1,024-byte guard never rejects a piece |
 
 ```sh
 go test ./streams/slip

@@ -64,7 +64,7 @@ of the driver peeked 188 bytes ahead itself; the look-ahead rule replaces that
 code and lexes every test input the same way.
 
 The driver follows the three rules of a
-[mode driver](../../README.md#modes-several-scanners-over-one-cursor):
+[mode driver](../../docs/standard.md#modes-several-scanners-over-one-cursor):
 
 1. **Release on every switch.** `modes.Driver` calls `Release()` on the
    outgoing scanner at every switch, and the driver switches from the header
@@ -123,15 +123,14 @@ Every value of the header bits is lexed. Not covered:
 
 The tests use the stream harness
 [`streamtest`](https://github.com/xiam/bytescan/tree/master/streamtest) (see
-[Long-running streams](../../README.md#long-running-streams)).
+[Long-running streams](../../docs/streams.md)).
 The generator writes one 188-byte packet per record on a video, an audio and
 the null PID: payload-only packets, packets with an adaptation field (a PCR or
 a flags byte, then stuffing) and a payload, adaptation-only packets, and null
 packets of `0xFF` stuffing.
 
-Every scanner has a per-token guard of 2,048 bytes, `2 * streamtest.ByteGuard`,
-because packets hold bytes of `0x80` and above, in `newScanner` itself, so
-`go run` is guarded too. The guard is a safety net: the largest token of a
+Every scanner has a per-token guard of 1,024 bytes, `streamtest.ByteGuard`, in
+`newScanner` itself, so `go run` is guarded too. The guard counts bytes. The guard is a safety net: the largest token of a
 rule is the 3-byte `HEADER`, the longest read is the 189 bytes of the
 confirmed sync, and the adaptation field and the payload, at most 184 bytes,
 are read by the driver, so no input reaches the guard.
@@ -139,7 +138,7 @@ are read by the driver, so no input reaches the guard.
 | Test | Shows |
 | --- | --- |
 | `TestGolden` | each `testdata` input against its golden file |
-| `TestGuard` | the production guard: a stream with no `0x47` keeps producing one-byte `UNKNOWN` tokens, with no guard error and memory under the harness ceiling; a rule added in the test that grows past the guard fails `Next` with `textreader.ErrRetentionExceeded` |
+| `TestGuard` | the production guard: a stream with no `0x47` keeps producing one-byte `UNKNOWN` tokens, with no guard error and memory under the harness ceiling; a rule added in the test that grows past the guard fails `Next` with `cursor.ErrRetentionExceeded` |
 | `TestInputs` | each `testdata` input equals the bytes built in `inputs_test.go` |
 | `TestLongRun` | a generated stream whose payload bytes take every value, `0x47` included: one `SYNC` and one `HEADER` per packet, every `SYNC` at a multiple of 188 bytes, no `UNKNOWN`, memory under the harness ceiling |
 | `TestCorruption` | garbage runs of 1 to 400 bytes without `0x47` between packets whose only `0x47` bytes are sync bytes. Every token is checked against the rule: garbage bytes are `UNKNOWN`; a packet after garbage is lexed as a packet when the next packet follows it directly, and is all `UNKNOWN` when garbage or the end of the stream follows it; every other packet starts with `SYNC` |
