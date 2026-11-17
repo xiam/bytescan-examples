@@ -1,0 +1,5 @@
+name = "Ada"
+s = f"Hello, {name}!"
+t = f"{name!r:>{10}} {{literal}}"
+u = rf'{x}\n'
+v = f"{d["key"]}"

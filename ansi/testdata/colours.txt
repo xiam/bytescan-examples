@@ -1,0 +1,2 @@
+plain red, bold red, orange and default
+ok	done

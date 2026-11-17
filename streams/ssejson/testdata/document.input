@@ -1,0 +1,19 @@
+: stream of a chat completion API
+retry: 3000
+
+event: message
+id: 1
+data: {"id": "c-1", "choices": [{"index": 0, "delta": {"content": "Hola"}}]}
+
+event: message
+id: 2
+data: {"id": "c-1", "choices": [{"index": 0, "delta": {"content": " café ☕"}}]}
+
+: keep-alive
+
+event: message
+id: 3
+data: {"id": "c-1", "usage": {"prompt_tokens": 12, "completion_tokens": 3}, "finish": null}
+
+data: [DONE]
+

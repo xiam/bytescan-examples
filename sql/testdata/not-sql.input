@@ -1,0 +1,4 @@
+SELECT `name` FROM t # a comment
+WHERE id = ? AND x = :name AND y = $1 AND z = @v
+$$body$$ E'x\n' U&'d\0061t' B'101' 'a' 'b' -- the last two are two strings
+SELECT [col] FROM t WHERE a != b;

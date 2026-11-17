@@ -1,0 +1,19 @@
+-- Orders per active customer since 2024.
+CREATE TABLE orders (
+  id INTEGER PRIMARY KEY,
+  customer_id INTEGER NOT NULL REFERENCES customers (id),
+  total DECIMAL(10, 2) DEFAULT 0.00,
+  note VARCHAR(200)
+);
+
+INSERT INTO orders VALUES (1, 42, 19.99, 'Customer''s first order');
+
+/* Join, filter, group and sort. */
+SELECT c."Display Name" AS name, COUNT(*) AS n, SUM(o.total) * 1.0E0 AS total
+FROM customers c
+  INNER JOIN orders o ON o.customer_id = c.id
+WHERE c.active = TRUE AND o.created >= DATE '2024-01-01' AND c.name <> N'Zoë'
+GROUP BY c."Display Name"
+HAVING COUNT(*) > 1
+ORDER BY total DESC, name ASC
+OFFSET 0 ROWS FETCH FIRST 10 ROWS ONLY;

@@ -1,0 +1,4 @@
+a = "unterminated
+b = 'also
+c = "\
+d = 1

@@ -1,0 +1,8 @@
+a = 'x' "x"
+b = r'x' R'x' u'x' U'x' f'x' F'x' b'x' B'x'
+c = fr'x' Fr'x' fR'x' FR'x' rf'x' rF'x' Rf'x' RF'x'
+d = br'x' Br'x' bR'x' BR'x' rb'x' rB'x' Rb'x' RB'x'
+e = 'it\'s' "say \"hi\"" r'\'' '' ""
+f = 'a\
+b'
+g = ub'x' bu'x' ur'x' x'y'

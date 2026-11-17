@@ -1,0 +1,5 @@
+if (ok) {}
+/ab+c/.test(s)
+if (x) /re/.exec(s)
+a++ / 2
+let type = 4; type / 2

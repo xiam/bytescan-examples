@@ -1,0 +1,14 @@
+x = <<EOS
+EO
+EOSX
+ EOS
+EOS 
+eos
+EOS
+y = <<-EOS
+	EOSEOS
+	EOS
+z = <<~EOS
+
+  
+EOS

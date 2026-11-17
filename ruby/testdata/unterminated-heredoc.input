@@ -1,0 +1,4 @@
+a = <<~EOS
+  body
+  EO
+  never closed

@@ -1,0 +1,28 @@
+package literals
+
+const (
+	decimal   = 0 + 7 + 1234567890 + 1_000_000
+	binary    = 0b1011 + 0B_1_0
+	octal     = 0o17 + 0O_7 + 017 + 0_17
+	hex       = 0x1F + 0XdeadBEEF + 0x_ff_ff
+	floats    = 0. + 1.5 + 72.40 + 072.40 + 1.e+0 + 6.67428e-11 + 1E6 + .25 + .12345E+5 + 1_5. + 0.15e+0_2
+	hexFloats = 0x1p-2 + 0x2.p10 + 0x1.Fp+0 + 0X.8p-0 + 0X_1FFFP-16
+	imaginary = 0i + 0123i + 0o123i + 0xabci + 0.i + 2.71828i + 1.e+0i + 6.67428e-11i + 1E6i + .25i + .12345E+5i + 0x1p-2i + 1_000i
+)
+
+var runes = []rune{'a', 'ä', '本', '\t', '\000', '\007', '\377', '\x07', '\xff', 'ዤ', '\U00101234', '\'', '\\', '\a', '\b', '\f', '\n', '\r', '\v'}
+
+var strings = []string{
+	`abc`,
+	`\n
+\n`,
+	``,
+	"",
+	"\n",
+	"\"",
+	"Hello, world!\n",
+	"日本語",
+	"日本\U00008a9e",
+	"\xffÿ",
+	"\101\x41\\",
+}

@@ -1,0 +1,37 @@
+# frozen_string_literal: true
+
+module Greeter
+  VERSION = "1.2.0"
+
+  class Hello
+    attr_reader :name
+
+    def initialize(name, greeting: "Hello")
+      @name = name
+      @greeting = greeting
+      @@count ||= 0
+      @@count += 1
+    end
+
+    def to_s
+      "#{@greeting}, #{name.capitalize}!"
+    end
+
+    def tags
+      %w[ruby lexer #{literal}] + %i(a b)
+    end
+
+    def help
+      <<~TEXT.lines.map(&:strip)
+        Usage: greet NAME
+        Version #{VERSION}
+      TEXT
+    end
+
+    def valid?
+      !name.empty? && $stdout.tty?
+    end
+  end
+end
+
+puts Greeter::Hello.new("world").to_s if __FILE__ == $PROGRAM_NAME

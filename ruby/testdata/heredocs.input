@@ -1,0 +1,18 @@
+text = <<~EOS.strip + tail(1) # code after the opener
+  indented body
+    keeps its layout
+  EOS
+both = <<-A + <<B
+  first body
+  A
+second body
+  B not the end
+B
+q = [<<'SQL', <<~"HTML"]
+SELECT 'not #{interpolated}'
+SQL
+  <p>#{x}</p>
+  HTML
+empty = <<E
+E
+last

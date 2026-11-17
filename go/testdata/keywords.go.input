@@ -1,0 +1,57 @@
+package keywords
+
+import "sync"
+
+type (
+	Point struct{ X, Y int }
+	Number interface{ ~int | ~float64 }
+	Pair[T any] map[string]T
+)
+
+const limit = 10
+
+var mu sync.Mutex
+
+func ops(a, b int, ch chan int, p *Point) int {
+	defer mu.Unlock()
+	go func() { ch <- a }()
+	x := a + b - a*b/2%3
+	x += 1; x -= 1; x *= 2; x /= 2; x %= 5
+	x &= b; x |= b; x ^= b; x <<= 1; x >>= 1; x &^= b
+	y := a & b | a ^ b &^ a << 1 >> 2
+	ok := a == b || a != b && a < b || a <= b || a > b || a >= b
+	ok = !ok
+	v := <-ch
+	x++
+	y--
+	p.X = x
+	s := []int{x, y, v}[0:2]
+	_ = s[:]
+	_ = ok
+	return y
+}
+
+func flow(n int, ch chan int) {
+	if n > limit {
+		goto end
+	} else if n < 0 {
+		return
+	}
+	for i := 0; i < n; i++ {
+		switch {
+		case i == 1:
+			continue
+		case i == 2:
+			fallthrough
+		default:
+			break
+		}
+	}
+	select {
+	case <-ch:
+	default:
+	}
+	for range ch {
+	}
+end:
+}

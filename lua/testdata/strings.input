@@ -1,0 +1,3 @@
+s = "double" .. 'single' .. "it's" .. 'say "hi"'
+e = "esc \" \\ \n \t \x41 \u{48} \z" .. 'it\'s'
+u = "héllo 日本"

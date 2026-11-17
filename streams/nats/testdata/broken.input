@@ -1,0 +1,12 @@
+#~%PING
+HELLO there
+ping
+PUB a 3
+abc
+PUB a x3
+abc
+MSG a 1
+SUB a q 1 extra
+PUBX a 1
+z
++OK

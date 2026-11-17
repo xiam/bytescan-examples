@@ -1,0 +1,4 @@
+# a comment
+x = 1 # after code
+#no space
+#{not interpolation}

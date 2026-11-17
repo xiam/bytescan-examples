@@ -1,0 +1,7 @@
+-- a simple comment
+SELECT 1 -- after a token
+/* a bracketed
+   comment */ SELECT /***/ 2
+/* /* not nested */ */
+--- three dashes
+-- at end of input

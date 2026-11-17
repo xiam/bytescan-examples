@@ -1,0 +1,6 @@
+--[[ a long comment on one line ]] x = 1
+--[==[
+  spans lines, and ]] or ]=] do not end it
+]==] y = 2
+--[[]]
+z = 3 --[=[ trailing ]=]

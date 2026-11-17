@@ -1,0 +1,8 @@
+"a #{ "b #{c}" } d"
+"#{x}#{y}" "" "#{}"
+"hash #{ {a: 1}[:a] } and #{ h.map { |k| k } }"
+"escaped \#{not} and # alone and #x and \"quote\" \\"
+"two
+lines #{n}"
+"#{ x # comment }
+}"

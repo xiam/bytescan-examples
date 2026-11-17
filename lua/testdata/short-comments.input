@@ -1,0 +1,8 @@
+-- a short comment
+--[ only a short comment
+--[= still short
+--[==x short as well
+--= short
+x = 1 -- after code
+--
+-- [[ a space after -- makes it short ]]

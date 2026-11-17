@@ -1,0 +1,20 @@
+# Gitleaks configuration for this repository.
+#
+# Use the default Gitleaks rules and allowlist, plus one exemption for one
+# known false positive. No path or rule is exempted.
+
+[extend]
+useDefault = true
+
+# binary/mp3/scanner.go declares the token type
+#     id3FrameBody   bytescan.TokenType = "ID3_FRAME_BODY"
+# and the default rule generic-api-key reads `TokenType = "ID3_FRAME_BODY"` as an
+# API key: the keyword "token", an assignment and a high-entropy value. The regex
+# matches that whole finding and nothing else, so every other finding, in this
+# file too, is still reported. Gitleaks 8.18.4 has no allowlist scoped to one
+# default rule (a [[rules]] entry with that id replaces the rule), so this is the
+# global allowlist; the default one has no regexes for regexTarget to change.
+[allowlist]
+description = "the ID3_FRAME_BODY token type of binary/mp3"
+regexTarget = "match"
+regexes = ['''^TokenType = "ID3_FRAME_BODY"$''']

@@ -1,0 +1,12 @@
+%w[a b [c] d]
+%q(it's (nested))
+%w|a b|
+%i<x y <z>>
+%Q{a #{b} {c}}
+%w(a\ b c\) d)
+%q[x \] y]
+%w!one two!
+%w[
+  multi line
+]
+%q-a-b-

@@ -1,0 +1,28 @@
+// Package shapes computes areas.
+package shapes
+
+import (
+	"fmt"
+	"math"
+)
+
+// Shape is anything with an area.
+type Shape interface {
+	Area() float64
+}
+
+type Circle struct{ R float64 }
+
+func (c Circle) Area() float64 { return math.Pi * c.R * c.R }
+
+/* Describe returns a line
+   for each shape. */
+func Describe(shapes ...Shape) []string {
+	var lines []string
+	for i, s := range shapes {
+		lines = append(lines, fmt.Sprintf("%d: %.2f", i, s.Area()))
+	}
+	return lines
+}
+
+func Größe(ж int) int { return ж * 2 }

@@ -1,0 +1,25 @@
+package semicolons
+
+func last() (int, string) {
+	a := 1 // a line comment after an identifier
+	b := 'b' /* a general comment on one line */
+	c := "c" /* a general comment
+	that ends the line */ d := 2.5
+	e := []int{1} // a carriage return + 2 inside a line comment is comment text
+	e[0]++
+	e[0]--
+	f := 3i; g := `raw`
+	_, _, _, _, _ = a, b, c, d, f
+	_ = e[0]
+	_ = g
+	return 1, "s"
+}
+
+func empty() {}
+
+func multiline(
+	x int,
+) {
+	_ = x
+}
+var final = 0 // the input ends after this comment, with no newline

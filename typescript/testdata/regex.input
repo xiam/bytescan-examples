@@ -1,0 +1,11 @@
+/start/.test(s)
+x = /ab+c/i
+f(/a/, /b/g)
+g(1, /c/m)
+function h() { return /re/.source; }
+typeof /x/
+a = [/\//, /[/]/, /[\]/]/, /\[/]
+b = /a\/b[c/]d/gimsuy
+c = !/x/ && /y/
+x = y ? /t/ : /f/
+`${/inside/.source}`

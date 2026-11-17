@@ -1,0 +1,4 @@
+#!/usr/bin/env lua
+x = 1 != 2 && y
+café = $a @b `c` ?
+a[=b] ]] =]

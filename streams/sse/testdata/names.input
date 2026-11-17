@@ -1,0 +1,10 @@
+event: update
+id: 42
+retry: 3000
+data: x
+foo: bar
+my field: has a space
+datax: longer name
+DATA: case
+events
+

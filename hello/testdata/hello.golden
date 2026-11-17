@@ -1,0 +1,5 @@
+1:0 KEYWORD "say"
+1:4 WORD "hello"
+1:10 WORD "to"
+1:13 WORD "the"
+1:17 WORD "world"

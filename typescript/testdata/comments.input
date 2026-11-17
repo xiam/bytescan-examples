@@ -1,0 +1,7 @@
+// a line comment
+x // after code
+/* a block */ y
+/* a block
+   across lines */
+/** doc ***/
+z /* unterminated block

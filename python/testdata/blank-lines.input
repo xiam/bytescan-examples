@@ -1,0 +1,11 @@
+def f():
+    a = 1
+
+    # a comment at the block level
+# a comment at column 0
+        # a deeper comment
+    
+	
+    b = 2
+
+# trailing comment

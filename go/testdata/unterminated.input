@@ -1,0 +1,5 @@
+s := "no closing quote
+r := 'x
+t := `a raw string
+that never ends
+c := 1 /* a comment that never ends
