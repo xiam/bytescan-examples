@@ -1,0 +1,64 @@
+load 134 bytes
+change [0,0) -> [0,134), shift +134
++ COMMENT [0,45) "/* the totals of the week,\n   in two lines */"
++ NL [45,46) "\n"
++ WORD [46,51) "total"
++ WS [51,52) " "
++ OP [52,53) "="
++ WS [53,54) " "
++ WORD [54,59) "alpha"
++ WS [59,60) " "
++ OP [60,61) "+"
++ WS [61,62) " "
++ WORD [62,66) "beta"
++ WS [66,67) " "
++ OP [67,68) "*"
++ WS [68,69) " "
++ NUMBER [69,72) "2.5"
++ NL [72,73) "\n"
++ WORD [73,77) "name"
++ WS [77,78) " "
++ OP [78,79) "="
++ WS [79,80) " "
++ STRING [80,90) "\"week one\""
++ NL [90,91) "\n"
++ WORD [91,96) "ratio"
++ WS [96,97) " "
++ OP [97,98) "="
++ WS [98,99) " "
++ WORD [99,104) "total"
++ WS [104,105) " "
++ OP [105,106) "/"
++ WS [106,107) " "
++ NUMBER [107,108) "7"
++ WS [108,109) " "
++ OP [109,111) "=="
++ WS [111,112) " "
++ NUMBER [112,113) "1"
++ OP [113,114) "."
++ NL [114,115) "\n"
++ WORD [115,119) "size"
++ WS [119,120) " "
++ OP [120,121) "="
++ WS [121,122) " "
++ NUMBER [122,123) "3"
++ WS [123,124) " "
++ UNKNOWN [124,125) "@"
++ WS [125,126) " "
++ NUMBER [126,127) "4"
++ WS [127,128) " "
++ UNKNOWN [128,129) "\""
++ WORD [129,133) "open"
++ NL [133,134) "\n"
+  /* the totals of the week,
+  Cccccccccccccccccccccccccc
+     in two lines */
+  cccccccccccccccccc
+  total = alpha + beta * 2.5
+  Wwwww O Wwwww O Wwww O Nnn
+  name = "week one"
+  Wwww O Ssssssssss
+  ratio = total / 7 == 1.
+  Wwwww O Wwwww O N Oo NO
+  size = 3 @ 4 "open
+  Wwww O N ? N ?Wwww

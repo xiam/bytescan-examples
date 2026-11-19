@@ -1,0 +1,6 @@
+/* the totals of the week,
+   in two lines */
+total = alpha + beta * 2.5
+name = "week one"
+ratio = total / 7 == 1.
+size = 3 @ 4 "open

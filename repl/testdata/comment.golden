@@ -1,0 +1,138 @@
+>
+key 'a': insert "a" at 0
+change [0,0) -> [0,1), shift +1
++ WORD [0,1) "a"
+  a
+  W
+key ' ': insert " " at 1
+change [1,1) -> [1,2), shift +1
++ WS [1,2) " "
+  a 
+  W
+key '/': insert "/" at 2
+change [2,2) -> [2,3), shift +1
++ OP [2,3) "/"
+  a /
+  W O
+key '*': insert "*" at 3
+change [3,3) -> [3,4), shift +1
++ OP [3,4) "*"
+  a /*
+  W OO
+key ' ': insert " " at 4
+change [4,4) -> [4,5), shift +1
++ WS [4,5) " "
+  a /* 
+  W OO
+key 'n': insert "n" at 5
+change [5,5) -> [5,6), shift +1
++ WORD [5,6) "n"
+  a /* n
+  W OO W
+key 'o': insert "o" at 6
+change [5,6) -> [5,7), shift +1
+- WORD [5,6) "n"
++ WORD [5,7) "no"
+  a /* no
+  W OO Ww
+key 't': insert "t" at 7
+change [5,7) -> [5,8), shift +1
+- WORD [5,7) "no"
++ WORD [5,8) "not"
+  a /* not
+  W OO Www
+key 'e': insert "e" at 8
+change [5,8) -> [5,9), shift +1
+- WORD [5,8) "not"
++ WORD [5,9) "note"
+  a /* note
+  W OO Wwww
+key enter: insert "\n" at 9
+change [9,9) -> [9,10), shift +1
++ NL [9,10) "\n"
+  a /* note
+  W OO Wwww
+continue: the token at 1:2 needs more input
+...
+key 'e': insert "e" at 10
+change [10,10) -> [10,11), shift +1
++ WORD [10,11) "e"
+  a /* note
+  W OO Wwww
+  e
+  W
+key 'n': insert "n" at 11
+change [10,11) -> [10,12), shift +1
+- WORD [10,11) "e"
++ WORD [10,12) "en"
+  a /* note
+  W OO Wwww
+  en
+  Ww
+key 'd': insert "d" at 12
+change [10,12) -> [10,13), shift +1
+- WORD [10,12) "en"
++ WORD [10,13) "end"
+  a /* note
+  W OO Wwww
+  end
+  Www
+key ' ': insert " " at 13
+change [13,13) -> [13,14), shift +1
++ WS [13,14) " "
+  a /* note
+  W OO Wwww
+  end 
+  Www
+key '*': insert "*" at 14
+change [14,14) -> [14,15), shift +1
++ OP [14,15) "*"
+  a /* note
+  W OO Wwww
+  end *
+  Www O
+key '/': insert "/" at 15
+change [2,15) -> [2,16), shift +1
+- OP [2,3) "/"
+- OP [3,4) "*"
+- WS [4,5) " "
+- WORD [5,9) "note"
+- NL [9,10) "\n"
+- WORD [10,13) "end"
+- WS [13,14) " "
+- OP [14,15) "*"
++ COMMENT [2,16) "/* note\nend */"
+  a /* note
+  W Ccccccc
+  end */
+  cccccc
+key ' ': insert " " at 16
+change [16,16) -> [16,17), shift +1
++ WS [16,17) " "
+  a /* note
+  W Ccccccc
+  end */ 
+  cccccc
+key 'b': insert "b" at 17
+change [17,17) -> [17,18), shift +1
++ WORD [17,18) "b"
+  a /* note
+  W Ccccccc
+  end */ b
+  cccccc W
+key enter: insert "\n" at 18
+change [18,18) -> [18,19), shift +1
++ NL [18,19) "\n"
+  a /* note
+  W Ccccccc
+  end */ b
+  cccccc W
+run
+1:0 WORD "a"
+1:1 WS " "
+1:2 COMMENT "/* note\nend */"
+2:6 WS " "
+2:7 WORD "b"
+2:8 NL "\n"
+>
+end of input

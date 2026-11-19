@@ -110,6 +110,17 @@ Guide: [nested-formats.md](https://github.com/xiam/bytescan/blob/master/docs/gui
 | --- | --- |
 | [streams/ssejson](../streams/ssejson) | piped scanners: JSON inside Server-Sent Events, two cursors |
 
+## Text that changes
+
+Guide: [text-that-changes.md](https://github.com/xiam/bytescan/blob/master/docs/guides/text-that-changes.md).
+These examples follow a text as it changes, and follow the extra rules in
+[Text that changes](edits.md).
+
+| Example | Technique |
+| --- | --- |
+| [highlight](../highlight) | the lexer with state (`statelex`): one change per edit, and a highlighter that repaints only the changed tokens |
+| [repl](../repl) | one edit per key; run or continue from `Lexer.Unfinished` and `Lexer.ModeAtEnd`, with a string as a mode |
+
 ## The cursor on its own
 
 Package: [`bytescan/cursor`](https://github.com/xiam/bytescan/tree/master/cursor).

@@ -1,0 +1,37 @@
+load 12 bytes
+change [0,0) -> [0,12), shift +12
++ WORD [0,1) "x"
++ WS [1,2) " "
++ OP [2,3) "="
++ WS [3,4) " "
++ NUMBER [4,5) "1"
++ NL [5,6) "\n"
++ WORD [6,7) "y"
++ WS [7,8) " "
++ OP [8,9) "="
++ WS [9,10) " "
++ NUMBER [10,11) "2"
++ NL [11,12) "\n"
+  x = 1
+  W O N
+  y = 2
+  W O N
+
+edit 1: replace [0,12) with "say \"hi\"\n"
+change [0,11) -> [0,8), shift -3
+- WORD [0,1) "x"
+- WS [1,2) " "
+- OP [2,3) "="
+- WS [3,4) " "
+- NUMBER [4,5) "1"
+- NL [5,6) "\n"
+- WORD [6,7) "y"
+- WS [7,8) " "
+- OP [8,9) "="
+- WS [9,10) " "
+- NUMBER [10,11) "2"
++ WORD [0,3) "say"
++ WS [3,4) " "
++ STRING [4,8) "\"hi\""
+  say "hi"
+  Www Ssss

@@ -16,14 +16,35 @@ import (
 
 // The documented worst case of the queue (README.md, "The queue"): the most
 // SSE tokens, and the most runes of their text, that the pipe holds at once.
+//
+// The queue holds the SSE tokens that one Next of the JSON layer pulled. The
+// JSON cursor reads the pipe only when it holds no whole rune. No JSON rule
+// goes on past a line feed, and none reads more than 1000 runes from where
+// its token starts: a run stops at 1000 runes without a look-ahead. So a Next
+// that starts with no rune buffered reads at most 1000 runes of one data
+// line, its line feed included, and a Next that starts with runes buffered
+// pulls at most the next piece of the same line and its EOL. A Read pulls a
+// token only while both counters are below their thresholds of 64 tokens and
+// 2,000 runes. So one Next pulls one of:
+//
+//   - counted tokens only: at most 63 tokens and 1,999 runes, and the token
+//     that reaches a threshold, at most 1000 runes; in all at most 64 tokens
+//     and 2,999 runes;
+//   - counted tokens below both thresholds, at most 63 tokens and 1,999
+//     runes, then one VALUE piece of a data line and its EOL. The JSON layer
+//     reads at most 1000 runes of them, the line feed included, but the EOL
+//     of a CRLF line end is 2 runes, so together they are at most 1,001
+//     runes; in all at most 65 tokens and 3,000 runes.
+//
+// The record worstCase("\r\n") reaches both at once.
 const (
-	worstTokens = 67
-	worstRunes  = 4000
+	worstTokens = 65
+	worstRunes  = 3000
 )
 
 // queueHeap bounds the live heap of a queue at the worst case, in bytes. The
-// engine stores the text of a token as a []rune, 4 bytes per rune, so 4,000
-// runes take 16,000 bytes, and each token adds its struct and span.
+// engine stores the text of a token as a []rune, 4 bytes per rune, so 3,000
+// runes take 12,000 bytes, and each token adds its struct and span.
 // TestQueueHeap measures it.
 const queueHeap = 32 << 10
 
@@ -172,11 +193,16 @@ var queueStreams = []struct {
 	// line inside.
 	{"c", "data:\"" + x(1994) + "\"\n" + comments(998, 998, 1000) + "data:\"" + x(1994) + "\"\n" + shorts(15) + "data\n" + shorts(16)},
 
-	// (c, second shape) A full VALUE piece read at the start of an inner
-	// Next, a counted run below the rune threshold, and the first VALUE
-	// piece of the next data line, read by the look-ahead fill of the same
-	// Next. This record reaches the worst case of 4,000 runes.
-	{"c-two-pieces", twoPieces},
+	// (c, worst case) A counted run just below both thresholds, then the
+	// first VALUE piece of a data line and its CRLF EOL. This record reaches
+	// the worst case of 65 tokens and 3,000 runes.
+	{"c-worst", worstCase("\r\n")},
+
+	// (c, mixed line ends) The same shape with CRLF and CR line ends in the
+	// counted run, 63 tokens of 1,999 runes, and a CR after the data line:
+	// 65 tokens, 2,999 runes.
+	{"c-mixed", strings.Repeat(":\r\n", 14) + strings.Repeat(":\r", 14) +
+		strings.ReplaceAll(comments(959, 960), "\n", "\r\n") + "\r" + "data:" + strings.Repeat("\t", 999) + "\r"},
 
 	// (d) A run just below a threshold, a data line whose value is one short
 	// multi-rune JSON token, then a second run.
@@ -192,14 +218,16 @@ var queueStreams = []struct {
 	{"e", "data:" + longNumber + "\n" + comments(998, 998, 1000) + comments(994) + "data:" + longNumber + "\n" + comments(998, 998, 1000)},
 }
 
-// twoPieces is the record of the second worst-case shape: a data line of
-// 1,001 tabs (VALUE pieces of 1000 and 1 runes, one JSON_WHITESPACE of 1000
-// runes), comments of 993 and 993 runes with their line ends (1,988 runes),
-// and a data line that opens a string of 1,000 runes. A search over the
-// prefix before the first line (0 to 3 runes), the length of the first line
-// (999 to 1,005 runes), the run (1,980 to 1,999 runes), and tabs, strings,
-// digits or letters in each data line found no queue above 4,000 runes.
-var twoPieces = "data:" + strings.Repeat("\t", 1001) + "\n" + comments(993, 993) + "data:\"" + x(1000) + "\n"
+// worstCase returns the record of the worst case, with eol after its data
+// line: 28 empty comments with their line ends (56 tokens, 56 runes),
+// comments of 967 and 968 runes with their line ends (4 tokens, 1,937 runes),
+// a blank line (1 token), DATA and COLON (2 tokens, 5 runes), so 63 tokens of
+// 1,999 runes, then a VALUE piece of 999 tabs and its EOL. The
+// JSON_WHITESPACE of 999 tabs reads the line feed after it, so one Next pulls
+// 65 tokens: 3,000 runes when eol is CRLF, and 2,999 runes otherwise.
+func worstCase(eol string) string {
+	return strings.Repeat(":\n", 28) + comments(967, 968) + "\n" + "data:" + strings.Repeat("\t", 999) + eol
+}
 
 // jsonLengthCheck returns a token function for streamtest.Run that fails the test
 // when a JSON token is longer than maxRun runes.
@@ -240,13 +268,23 @@ func TestQueue(t *testing.T) {
 	t.Logf("all streams: max queue %d tokens, %d runes", maxLex, maxRunes)
 }
 
-// TestTwoPieces checks that the record of the second shape fills the queue
-// to the documented worst case of 4,000 runes, and no further.
-func TestTwoPieces(t *testing.T) {
-	lex, runes := lexQueue(t, strings.Repeat(twoPieces, 2))
-	t.Logf("max queue %d tokens, %d runes", lex, runes)
-	if runes != worstRunes {
-		t.Errorf("queue of %d runes, want the worst case of %d", runes, worstRunes)
+// TestWorstCase checks that the record worstCase fills the queue to the
+// documented worst case of 65 tokens and 3,000 runes with a CRLF line end,
+// and to one rune less with an LF or a CR.
+func TestWorstCase(t *testing.T) {
+	for _, c := range []struct {
+		name, eol string
+		runes     int
+	}{
+		{"crlf", "\r\n", worstRunes},
+		{"lf", "\n", worstRunes - 1},
+		{"cr", "\r", worstRunes - 1},
+	} {
+		lex, runes := lexQueue(t, strings.Repeat(worstCase(c.eol), 2))
+		t.Logf("%s: max queue %d tokens, %d runes", c.name, lex, runes)
+		if lex != worstTokens || runes != c.runes {
+			t.Errorf("%s: queue of %d tokens and %d runes, want %d tokens and %d runes", c.name, lex, runes, worstTokens, c.runes)
+		}
 	}
 }
 
@@ -348,12 +386,12 @@ func TestQueueSearch(t *testing.T) {
 	}
 }
 
-// TestQueueHeap measures the live heap of a queue at the worst case, 67 SSE
-// tokens of 4,000 runes, and checks that it is within queueHeap.
+// TestQueueHeap measures the live heap of a queue at the worst case, 65 SSE
+// tokens of 3,000 runes, and checks that it is within queueHeap.
 func TestQueueHeap(t *testing.T) {
-	// 3 COMMENT(1000) and EOL, 30 COMMENT(32) and EOL, and COMMENT(7):
-	// 67 tokens, 4,000 runes.
-	in := strings.Repeat(comments(1000), 3) + strings.Repeat(comments(32), 30) + ":" + x(6)
+	// 2 COMMENT(1000) and EOL, 30 COMMENT(32) and EOL, and COMMENT(8):
+	// 65 tokens, 3,000 runes.
+	in := strings.Repeat(comments(1000), 2) + strings.Repeat(comments(32), 30) + ":" + x(7)
 	sse := ssedriver.New(strings.NewReader(in), bytescan.WithMaxTokenBytes(maxTokenBytes))
 	q := make([]*bytescan.Token, 0, worstTokens)
 

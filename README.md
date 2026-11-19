@@ -87,6 +87,16 @@ keep going after corrupt data.
 | [streams/mpegts](streams/mpegts) | MPEG transport stream, the fixed-size packets of digital TV. |
 | [streams/slip](streams/slip) | SLIP frames, packets sent over a serial line. |
 
+### Text that changes
+
+These programs follow a text as it changes. After each edit they update only
+what the edit changed.
+
+| Example | What it shows |
+| --- | --- |
+| [highlight](highlight) | A syntax highlighter that repaints only the tokens an edit changed. |
+| [repl](repl) | A prompt loop that follows each key, and waits for one more line while a string or a comment is open. |
+
 ### The cursor on its own
 
 bytescan reads its input through a cursor. You can also use the cursor
@@ -118,6 +128,8 @@ About these examples:
   Read it before you add or change an example.
 - [Long-running streams](docs/streams.md): the extra rules for the stream
   examples.
+- [Text that changes](docs/edits.md): the extra rules for the examples that
+  lex a text that changes.
 - [Working on the examples](docs/development.md): the repository layout, and
   how to test the examples against a bytescan checkout.
 

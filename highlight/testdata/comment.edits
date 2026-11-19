@@ -1,0 +1,8 @@
+# Type a comment start: with no end, "/" and "*" are operators.
+2 2 "/* "
+# Type at the end, after the open comment.
+8 8 "z"
+# Type the comment end: the comment opens and closes, across a line.
+9 9 " */"
+# Delete " */": the comment is open again.
+9 12

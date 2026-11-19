@@ -1,0 +1,39 @@
+load 18 bytes
+change [0,0) -> [0,18), shift +18
++ WORD [0,1) "x"
++ WS [1,2) " "
++ OP [2,3) "="
++ WS [3,4) " "
++ NUMBER [4,5) "1"
++ NL [5,6) "\n"
++ WORD [6,7) "y"
++ WS [7,8) " "
++ OP [8,9) "="
++ WS [9,10) " "
++ NUMBER [10,11) "2"
++ NL [11,12) "\n"
++ WORD [12,13) "z"
++ WS [13,14) " "
++ OP [14,15) "="
++ WS [15,16) " "
++ NUMBER [16,17) "3"
++ NL [17,18) "\n"
+  x = 1
+  W O N
+  y = 2
+  W O N
+  z = 3
+  W O N
+
+edit 1: delete [0,6)
+change [0,6) -> [0,0), shift -6
+- WORD [0,1) "x"
+- WS [1,2) " "
+- OP [2,3) "="
+- WS [3,4) " "
+- NUMBER [4,5) "1"
+- NL [5,6) "\n"
+  y = 2
+  W O N
+  z = 3
+  W O N

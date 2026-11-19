@@ -1,8 +1,6 @@
 package main
 
 import (
-	"unicode/utf8"
-
 	"github.com/xiam/bytescan"
 	"github.com/xiam/bytescan-examples/streams/sse/ssedriver"
 )
@@ -16,10 +14,11 @@ const (
 )
 
 // keepAlive is what the pipe returns while its counters are full and it holds
-// no bytes: utf8.UTFMax line feeds. The cursor fills at least utf8.UTFMax
-// bytes before it decodes a rune, so one keep-alive lets the JSON scanner
-// return without a second read of the SSE layer.
-var keepAlive = [utf8.UTFMax]byte{'\n', '\n', '\n', '\n'}
+// no bytes: one line feed. The cursor reads the pipe only when it holds no
+// whole rune, and a line feed is one, so the JSON scanner returns a JSON_EOL
+// without a second read of the SSE layer. Read cannot return nothing instead:
+// the cursor treats a read of 0 bytes and no error as io.ErrNoProgress.
+var keepAlive = [1]byte{'\n'}
 
 // lineFeed is the line feed that the pipe returns after the line end of a
 // data line, as the SSE format appends one to the data buffer.

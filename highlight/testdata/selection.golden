@@ -1,0 +1,27 @@
+load 14 bytes
+change [0,0) -> [0,14), shift +14
++ WORD [0,1) "a"
++ WS [1,2) " "
++ OP [2,3) "="
++ WS [3,4) " "
++ WORD [4,5) "b"
++ WS [5,6) " "
++ OP [6,7) "+"
++ WS [7,8) " "
++ WORD [8,9) "c"
++ WS [9,10) " "
++ OP [10,11) "*"
++ WS [11,12) " "
++ WORD [12,13) "d"
++ NL [13,14) "\n"
+  a = b + c * d
+  W O W O W O W
+
+edit 1: delete [5,9)
+change [5,9) -> [5,5), shift -4
+- WS [5,6) " "
+- OP [6,7) "+"
+- WS [7,8) " "
+- WORD [8,9) "c"
+  a = b * d
+  W O W O W
