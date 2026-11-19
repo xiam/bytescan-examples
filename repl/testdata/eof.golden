@@ -1,0 +1,104 @@
+>
+key 'x': insert "x" at 0
+change [0,0) -> [0,1), shift +1
++ WORD [0,1) "x"
+  x
+  W
+key ' ': insert " " at 1
+change [1,1) -> [1,2), shift +1
++ WS [1,2) " "
+  x 
+  W
+key '=': insert "=" at 2
+change [2,2) -> [2,3), shift +1
++ OP [2,3) "="
+  x =
+  W O
+key ' ': insert " " at 3
+change [3,3) -> [3,4), shift +1
++ WS [3,4) " "
+  x = 
+  W O
+key '"': insert "\"" at 4
+change [4,4) -> [4,5), shift +1
++ QUOTE [4,5) "\""
+  x = "
+  W O Q
+key 'o': insert "o" at 5
+change [5,5) -> [5,6), shift +1
++ TEXT [5,6) "o"
+  x = "o
+  W O QS
+key 'p': insert "p" at 6
+change [5,6) -> [5,7), shift +1
+- TEXT [5,6) "o"
++ TEXT [5,7) "op"
+  x = "op
+  W O QSs
+key 'e': insert "e" at 7
+change [5,7) -> [5,8), shift +1
+- TEXT [5,7) "op"
++ TEXT [5,8) "ope"
+  x = "ope
+  W O QSss
+key 'n': insert "n" at 8
+change [5,8) -> [5,9), shift +1
+- TEXT [5,8) "ope"
++ TEXT [5,9) "open"
+  x = "open
+  W O QSsss
+key enter: insert "\n" at 9
+change [9,9) -> [9,10), shift +1
++ NL [9,10) "\n"
+  x = "open
+  W O QSsss
+continue: the text ends in the mode str
+...
+key 's': insert "s" at 10
+change [10,10) -> [10,11), shift +1
++ TEXT [10,11) "s"
+  x = "open
+  W O QSsss
+  s
+  S
+key 't': insert "t" at 11
+change [10,11) -> [10,12), shift +1
+- TEXT [10,11) "s"
++ TEXT [10,12) "st"
+  x = "open
+  W O QSsss
+  st
+  Ss
+key 'i': insert "i" at 12
+change [10,12) -> [10,13), shift +1
+- TEXT [10,12) "st"
++ TEXT [10,13) "sti"
+  x = "open
+  W O QSsss
+  sti
+  Sss
+key 'l': insert "l" at 13
+change [10,13) -> [10,14), shift +1
+- TEXT [10,13) "sti"
++ TEXT [10,14) "stil"
+  x = "open
+  W O QSsss
+  stil
+  Ssss
+key 'l': insert "l" at 14
+change [10,14) -> [10,15), shift +1
+- TEXT [10,14) "stil"
++ TEXT [10,15) "still"
+  x = "open
+  W O QSsss
+  still
+  Sssss
+end of input: the entry was not finished: the token at 2:0 needs more input; the text ends in the mode str; the last line has no enter
+1:0 WORD "x"
+1:1 WS " "
+1:2 OP "="
+1:3 WS " "
+1:4 QUOTE "\""
+1:5 TEXT "open"
+1:9 NL "\n"
+2:0 TEXT "still"

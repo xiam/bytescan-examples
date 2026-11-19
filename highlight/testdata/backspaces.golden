@@ -1,0 +1,88 @@
+load 21 bytes
+change [0,0) -> [0,21), shift +21
++ WORD [0,5) "total"
++ WS [5,6) " "
++ OP [6,7) "="
++ WS [7,8) " "
++ WORD [8,13) "alpha"
++ WS [13,14) " "
++ OP [14,15) "+"
++ WS [15,16) " "
++ WORD [16,20) "beta"
++ NL [20,21) "\n"
+  total = alpha + beta
+  Wwwww O Wwwww O Wwww
+
+edit 1: delete [12,13)
+change [8,13) -> [8,12), shift -1
+- WORD [8,13) "alpha"
++ WORD [8,12) "alph"
+  total = alph + beta
+  Wwwww O Wwww O Wwww
+
+edit 2: delete [11,12)
+change [8,12) -> [8,11), shift -1
+- WORD [8,12) "alph"
++ WORD [8,11) "alp"
+  total = alp + beta
+  Wwwww O Www O Wwww
+
+edit 3: delete [10,11)
+change [8,11) -> [8,10), shift -1
+- WORD [8,11) "alp"
++ WORD [8,10) "al"
+  total = al + beta
+  Wwwww O Ww O Wwww
+
+edit 4: delete [9,10)
+change [8,10) -> [8,9), shift -1
+- WORD [8,10) "al"
++ WORD [8,9) "a"
+  total = a + beta
+  Wwwww O W O Wwww
+
+edit 5: delete [8,9)
+change [7,10) -> [7,9), shift -1
+- WS [7,8) " "
+- WORD [8,9) "a"
+- WS [9,10) " "
++ WS [7,9) "  "
+  total =  + beta
+  Wwwww O  O Wwww
+
+edit 6: delete [7,8)
+change [7,9) -> [7,8), shift -1
+- WS [7,9) "  "
++ WS [7,8) " "
+  total = + beta
+  Wwwww O O Wwww
+
+edit 7: delete [6,7)
+change [5,8) -> [5,7), shift -1
+- WS [5,6) " "
+- OP [6,7) "="
+- WS [7,8) " "
++ WS [5,7) "  "
+  total  + beta
+  Wwwww  O Wwww
+
+edit 8: delete [5,6)
+change [5,7) -> [5,6), shift -1
+- WS [5,7) "  "
++ WS [5,6) " "
+  total + beta
+  Wwwww O Wwww
+
+edit 9: delete [4,5)
+change [0,5) -> [0,4), shift -1
+- WORD [0,5) "total"
++ WORD [0,4) "tota"
+  tota + beta
+  Wwww O Wwww
+
+edit 10: delete [3,4)
+change [0,4) -> [0,3), shift -1
+- WORD [0,4) "tota"
++ WORD [0,3) "tot"
+  tot + beta
+  Www O Wwww

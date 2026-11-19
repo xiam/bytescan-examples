@@ -35,10 +35,11 @@ func newJSONDriver(cur bytescan.Cursor, opts ...bytescan.Option) *modes.Driver {
 // Its Next returns the SSE tokens that the pipe queued, in order, and then
 // the JSON token whose read made the pipe queue them. So the output is one
 // sequence that shows both layers, in read order. The JSON layer's cursor
-// reads ahead (it fills at least 4 bytes before it decodes a rune, and the
-// engine reads one rune past a token), so the SSE layer runs ahead of the
-// JSON layer: the SSE tokens of the next event can come before the last
-// JSON token of a document.
+// reads the pipe only when it holds no whole rune, and the JSON scanner reads
+// one rune past a token only while a rule could still go on. So the SSE layer
+// runs ahead of the JSON layer: the SSE tokens that lead to a piece of a data
+// value, or to the line feed after it, come before the JSON token whose read
+// pulled them.
 //
 // The JSON scanner is inside Next while the pipe calls the SSE driver's Next.
 // That is allowed, because the two scanners do not share a cursor. The driver's

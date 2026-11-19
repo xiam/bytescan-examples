@@ -20,7 +20,7 @@ docs/                     the pages that go deeper than the README
 
 ## Running the examples
 
-`go.mod` requires the released `github.com/xiam/bytescan v0.4.0`, so the
+`go.mod` requires the released `github.com/xiam/bytescan v0.5.0`, so the
 examples build on their own:
 
 ```sh

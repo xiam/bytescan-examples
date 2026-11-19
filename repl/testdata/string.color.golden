@@ -1,0 +1,103 @@
+>
+key 's': insert "s" at 0
+change [0,0) -> [0,1), shift +1
++ WORD [0,1) "s"
+[36ms[0m
+key 'a': insert "a" at 1
+change [0,1) -> [0,2), shift +1
+- WORD [0,1) "s"
++ WORD [0,2) "sa"
+[36msa[0m
+key 'y': insert "y" at 2
+change [0,2) -> [0,3), shift +1
+- WORD [0,2) "sa"
++ WORD [0,3) "say"
+[36msay[0m
+key ' ': insert " " at 3
+change [3,3) -> [3,4), shift +1
++ WS [3,4) " "
+[36msay[0m 
+key '"': insert "\"" at 4
+change [4,4) -> [4,5), shift +1
++ QUOTE [4,5) "\""
+[36msay[0m [32m"[0m
+key 'h': insert "h" at 5
+change [5,5) -> [5,6), shift +1
++ TEXT [5,6) "h"
+[36msay[0m [32m"[0m[32mh[0m
+key 'e': insert "e" at 6
+change [5,6) -> [5,7), shift +1
+- TEXT [5,6) "h"
++ TEXT [5,7) "he"
+[36msay[0m [32m"[0m[32mhe[0m
+key 'l': insert "l" at 7
+change [5,7) -> [5,8), shift +1
+- TEXT [5,7) "he"
++ TEXT [5,8) "hel"
+[36msay[0m [32m"[0m[32mhel[0m
+key 'l': insert "l" at 8
+change [5,8) -> [5,9), shift +1
+- TEXT [5,8) "hel"
++ TEXT [5,9) "hell"
+[36msay[0m [32m"[0m[32mhell[0m
+key 'o': insert "o" at 9
+change [5,9) -> [5,10), shift +1
+- TEXT [5,9) "hell"
++ TEXT [5,10) "hello"
+[36msay[0m [32m"[0m[32mhello[0m
+key enter: insert "\n" at 10
+change [10,10) -> [10,11), shift +1
++ NL [10,11) "\n"
+[36msay[0m [32m"[0m[32mhello[0m
+continue: the text ends in the mode str
+...
+key 'w': insert "w" at 11
+change [11,11) -> [11,12), shift +1
++ TEXT [11,12) "w"
+[36msay[0m [32m"[0m[32mhello[0m
+[32mw[0m
+key 'o': insert "o" at 12
+change [11,12) -> [11,13), shift +1
+- TEXT [11,12) "w"
++ TEXT [11,13) "wo"
+[36msay[0m [32m"[0m[32mhello[0m
+[32mwo[0m
+key 'r': insert "r" at 13
+change [11,13) -> [11,14), shift +1
+- TEXT [11,13) "wo"
++ TEXT [11,14) "wor"
+[36msay[0m [32m"[0m[32mhello[0m
+[32mwor[0m
+key 'l': insert "l" at 14
+change [11,14) -> [11,15), shift +1
+- TEXT [11,14) "wor"
++ TEXT [11,15) "worl"
+[36msay[0m [32m"[0m[32mhello[0m
+[32mworl[0m
+key 'd': insert "d" at 15
+change [11,15) -> [11,16), shift +1
+- TEXT [11,15) "worl"
++ TEXT [11,16) "world"
+[36msay[0m [32m"[0m[32mhello[0m
+[32mworld[0m
+key '"': insert "\"" at 16
+change [16,16) -> [16,17), shift +1
++ QUOTE [16,17) "\""
+[36msay[0m [32m"[0m[32mhello[0m
+[32mworld[0m[32m"[0m
+key enter: insert "\n" at 17
+change [17,17) -> [17,18), shift +1
++ NL [17,18) "\n"
+[36msay[0m [32m"[0m[32mhello[0m
+[32mworld[0m[32m"[0m
+run
+1:0 WORD "say"
+1:3 WS " "
+1:4 QUOTE "\""
+1:5 TEXT "hello"
+1:10 NL "\n"
+2:0 TEXT "world"
+2:5 QUOTE "\""
+2:6 NL "\n"
+>
+end of input

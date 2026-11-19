@@ -1,0 +1,59 @@
+load 6 bytes
+change [0,0) -> [0,6), shift +6
++ WORD [0,1) "a"
++ WS [1,2) " "
++ WORD [2,3) "x"
++ NL [3,4) "\n"
++ WORD [4,5) "b"
++ NL [5,6) "\n"
+  a x
+  W W
+  b
+  W
+
+edit 1: insert "/* " at 2
+change [2,2) -> [2,5), shift +3
++ OP [2,3) "/"
++ OP [3,4) "*"
++ WS [4,5) " "
+  a /* x
+  W OO W
+  b
+  W
+
+edit 2: insert "z" at 8
+change [7,8) -> [7,9), shift +1
+- WORD [7,8) "b"
++ WORD [7,9) "bz"
+  a /* x
+  W OO W
+  bz
+  Ww
+
+edit 3: insert " */" at 9
+change [2,9) -> [2,12), shift +3
+- OP [2,3) "/"
+- OP [3,4) "*"
+- WS [4,5) " "
+- WORD [5,6) "x"
+- NL [6,7) "\n"
+- WORD [7,9) "bz"
++ COMMENT [2,12) "/* x\nbz */"
+  a /* x
+  W Cccc
+  bz */
+  ccccc
+
+edit 4: delete [9,12)
+change [2,12) -> [2,9), shift -3
+- COMMENT [2,12) "/* x\nbz */"
++ OP [2,3) "/"
++ OP [3,4) "*"
++ WS [4,5) " "
++ WORD [5,6) "x"
++ NL [6,7) "\n"
++ WORD [7,9) "bz"
+  a /* x
+  W OO W
+  bz
+  Ww

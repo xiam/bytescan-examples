@@ -100,14 +100,14 @@ JSON line 1 is the first `data` line, and each `data` line, and each
 keep-alive line feed, starts a new JSON line.
 
 **Read order.** The layers interleave by read order, not by source position,
-and the SSE layer runs ahead of the JSON layer. Before the JSON cursor decodes
-a rune it fills at least `utf8.UTFMax` (4) bytes, and the engine reads one
-rune past the end of a token to decide it. So the SSE tokens that produce
-the next 4 bytes of piped text after a JSON token's look-ahead rune come
-before that JSON token. A document that ends in `}` and the line feed of its
-`data` line has only 1 byte after the `}`, so the SSE tokens of the next
-`data` line, and of everything before it, come before the `}` (see
-`read-order`). With a 1000-rune piece the run-ahead is up to that piece.
+and the SSE layer runs ahead of the JSON layer. The JSON cursor reads the pipe
+only when it holds no whole rune. The engine reads one rune past a token only
+while a rule could still go on: after a number, or a run of whitespace or
+string text. So the SSE tokens that lead to a piece of a `data` value, or to
+the line feed after it, come before the JSON token whose read pulled them.
+The `EOL` of a `data` line comes before the `JSON_EOL` of its line feed, and
+the SSE tokens of the next event come before the first JSON token of its
+`data` (see `read-order`).
 
 ## The queue
 
@@ -123,10 +123,10 @@ sees a line feed inside a `data` value that the stream does not have. The
 When a count has reached **64 tokens or 2,000 runes**, whichever comes first,
 the pipe reads no further SSE token until the reset. Each `Read` first
 returns bytes that it still holds (the rest of a piece, a pending line feed),
-and otherwise returns a **keep-alive** of `utf8.UTFMax` (4) line feeds, which
-fills the cursor's 4-byte fill with one read. The keep-alive follows the same
-short-read rule as a piece. It only adds `JSON_EOL` tokens at the start of a
-JSON line, where a line feed already ended any string.
+and otherwise returns a **keep-alive**: one line feed. The JSON scanner
+returns it as a `JSON_EOL` without another read, so the combined driver can
+return the queue and reset the counters. A keep-alive only adds a `JSON_EOL`
+at the start of a JSON line, where a line feed already ended any string.
 
 **Reset rule.** The counters reset when the combined driver has returned
 every queued token, that is, before it calls the JSON driver's `Next()`
@@ -140,46 +140,41 @@ review:
 - A reset after 4 returned bytes let a short `data` line such as `data:true`
   do the same for two batches, because its JSON token still needs more bytes.
 
-**Worst case: 67 tokens or 4,000 runes.** The derivation rests on the bound
-on every JSON token: at most 1000 runes. One JSON `Next()` reads at most one
-1000-rune token, its look-ahead rune and the 4-byte fill after it. So it
-reads at most two `VALUE` pieces that it does not count, and one counted
-batch. Two shapes reach the bound:
+**Worst case: 65 tokens and 3,000 runes.** The queue holds the SSE tokens
+that one JSON `Next()` pulled. No JSON rule goes on past a line feed, and
+none reads more than 1000 runes from where its token starts: a run stops at
+1000 runes without a look-ahead. So one JSON `Next()` reads at most one
+`VALUE` piece that it does not count, and the line end after it. The pipe
+pulls a token only while both counts are below their thresholds, so the
+counted tokens before that piece are at most 63 tokens and 1,999 runes. Two
+shapes reach the bound:
 
-1. **A batch that crosses a threshold, plus one uncounted piece.** A counted
-   run just below a threshold, plus the one token that crosses it (up to
-   1000 runes), plus one `VALUE` piece of up to 1000 runes with its line feed.
-   A 1000-rune JSON token that starts at the end of one piece reads the whole
-   next piece, and the fill then reads the run after it. Add the few tokens
-   of short `data` lines (`DATA`, `COLON`, `EOL`): about 67 tokens, or about
-   2,000 + 1000 + 1000 runes.
-2. **A batch under the threshold between two uncounted pieces.** A full
-   `VALUE` piece read at the start of a JSON `Next()`, a counted run just under
-   the rune threshold, and the first `VALUE` piece of the next `data` line,
-   read by the look-ahead fill of the same `Next()`. The record of queue-test
-   stream `c-two-pieces` builds it: a `data` line of 1,001 tabs (one
-   1000-rune `JSON_WHITESPACE`), comments of 1,988 runes with their line ends,
-   and a `data` line that opens a 1000-rune string. The queue then holds
-   `VALUE(1000) VALUE(1) EOL COMMENT EOL COMMENT EOL DATA COLON VALUE(1000)`
-   and more, exactly 4,000 runes.
+1. **A batch that crosses a threshold.** A counted run just below a
+   threshold, plus the one token that crosses it (up to 1000 runes): at most
+   64 tokens and 2,999 runes.
+2. **A batch under the thresholds, then one piece.** A counted run just
+   under both thresholds, then the `VALUE` piece of a `data` line and its
+   `EOL`. The JSON layer reads at most 1000 runes of them, but the `EOL` of a
+   `\r\n` line end is 2 runes, so together they are up to 1,001 runes: at
+   most 65 tokens and 3,000 runes. The record of queue-test stream `c-worst`
+   builds it: 63 counted tokens of 1,999 runes, then a `data` line of 999
+   tabs that ends in `\r\n`. The `JSON_WHITESPACE` of 999 tabs reads the line
+   feed after it, so the queue holds 65 tokens of 3,000 runes.
 
-**Measured.** The tests assert the stated bound, 67 tokens and 4,000 runes,
+**Measured.** The tests assert the stated bound, 65 tokens and 3,000 runes,
 on every stream. The measured maxima (go1.25.4, linux/amd64):
 
 | Streams | Tokens | Runes |
 | --- | --- | --- |
-| queue test, streams (a) to (e) and `c-two-pieces` | 64 | 4,000 |
-| random search, 400 streams | 65 | 3,091 |
-| long run, 512 KiB | 49 | 2,215 |
+| queue test, streams (a) to (e), `c-worst` and `c-mixed` | 65 | 3,000 |
+| random search, 400 streams | 64 | 2,997 |
+| long run, 512 KiB | 38 | 2,182 |
 
-A search over the two-piece record (prefix 0 to 3 runes, first line 999 to
-1,005 runes, run 1,980 to 1,999 runes, and tabs, strings, digits or letters
-in each `data` line) found no queue above 4,000 runes. A queue at the worst
-case, 67 tokens of 4,000 runes, holds **28,784 bytes** of live heap (26,520
-bytes under the race detector; `TestQueueHeap`). The engine stores the text of
-a token as a `[]rune`, 4 bytes per rune, so 4,000 runes take 16,000 bytes,
-and each token adds its struct and span. The tests bound it at 32 KiB
-(`queueHeap`).
+A queue at the worst case, 65 tokens of 3,000 runes, holds about **24,400
+bytes** of live heap (22,392 bytes under the race detector; `TestQueueHeap`).
+The engine stores the text of a token as a `[]rune`, 4 bytes per rune, so
+3,000 runes take 12,000 bytes, and each token adds its struct and span. The tests
+bound it at 32 KiB (`queueHeap`).
 
 **Ceiling.** The queue is held on top of everything that the harness default
 ceiling already allows. So this example sets its own ceiling with
@@ -222,7 +217,7 @@ only.
 | --- | --- |
 | `document` | a realistic chat-completion stream: events, ids, `retry`, a keep-alive comment, and `data: [DONE]` |
 | `split` | a document split between JSON tokens over four `data` lines, with a comment and a non-`data` field between them |
-| `read-order` | a document whose `}` comes after the SSE tokens of the next event |
+| `read-order` | the `EOL` of a `data` line before its `JSON_EOL`, and the SSE tokens of the next event before the first JSON token of its `data` |
 | `piece-boundary` | a number and a literal that cross a 1000-rune `VALUE` piece boundary inside one `data` line, each one token |
 | `long-string` | a string of more than 1000 runes, in two `JSON_STRING_TEXT` pieces |
 | `unterminated` | a string ended by the line end of its `data` line, then a correct document |
@@ -238,10 +233,11 @@ test.
   4,096, 1 and 3 bytes, and compares its bytes with the data buffer that a
   separate reading of the WHATWG rules gives: each `data` value, a `\n` after
   each `data` line, and the keep-alives at the offsets the pipe reports.
-- **`TestQueue`** runs the queue-test streams (a) to (e) and `c-two-pieces`,
+- **`TestQueue`** runs the queue-test streams (a) to (e), `c-worst` and `c-mixed`,
   each at the harness default budget under this example's ceiling, and
   asserts the worst case and the 1000-rune bound on every JSON token.
-  `TestTwoPieces` checks that `c-two-pieces` reaches 4,000 runes.
+  `TestWorstCase` checks that the worst-case record reaches 65 tokens and
+  3,000 runes with a `\r\n` line end, and 2,999 runes with `\n` or `\r`.
   **`TestQueueSearch`** lexes 400 random streams from fixed seeds (40 under
   the race detector) that mix comments, non-`data` fields and `data` lines of
   0 to 4,000 runes, with numbers whose digit runs have 1 to 1000 digits.

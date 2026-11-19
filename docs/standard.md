@@ -7,6 +7,8 @@ reference: copy its layout when you add an example.
 The programs under [`cursor/`](../cursor) use the cursor without a scanner, so
 these rules do not apply to them. Stream examples follow these rules and the
 extra rules in [Long-running streams](streams.md).
+Examples that lex a text that changes follow these rules with the
+differences in [Text that changes](edits.md).
 
 ## Lexing only
 
@@ -101,6 +103,9 @@ The output of `go run` on an input file is exactly its golden file.
 - `lexdump.Golden(t, d, newScanner)` runs every `testdata/*.input` through
   `newScanner` and `d`, and compares the output with the `.golden` file of the
   same name. `go test -update` rewrites the golden files.
+- `lexdump.Compare(t, golden, got)` compares any output with one golden
+  file, and `go test -update` rewrites it. An example whose output is not a
+  token dump uses it ([highlight](../highlight)).
 - `lexdump.GoldenWithout(t, newView, drop)` checks a filtered view against
   the same golden files without the lines of the dropped types, so a filter
   needs no golden files of its own ([ansi](../ansi),

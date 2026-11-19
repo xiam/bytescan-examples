@@ -48,18 +48,26 @@ func Golden[L bytescan.Source](t *testing.T, d Dumper, newScanner func(io.Reader
 			if err := d.Dump(&got, newScanner(f)); err != nil {
 				t.Fatalf("dump %s: %v", input, err)
 			}
-			if *update {
-				if err := os.WriteFile(golden, got.Bytes(), 0o644); err != nil {
-					t.Fatal(err)
-				}
-			}
-			want, err := os.ReadFile(golden)
-			if err != nil {
-				t.Fatalf("%v (run go test -update to create it)", err)
-			}
-			if !bytes.Equal(got.Bytes(), want) {
-				t.Errorf("output differs from %s; review it, then run go test -update\n--- got ---\n%s--- want ---\n%s", golden, got.Bytes(), want)
-			}
+			Compare(t, golden, got.Bytes())
 		})
+	}
+}
+
+// Compare checks got against the golden file golden. With go test -update it
+// writes got to the golden file first. An example whose output is not a token
+// dump, such as the highlighter, calls it directly.
+func Compare(t *testing.T, golden string, got []byte) {
+	t.Helper()
+	if *update {
+		if err := os.WriteFile(golden, got, 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	want, err := os.ReadFile(golden)
+	if err != nil {
+		t.Fatalf("%v (run go test -update to create it)", err)
+	}
+	if !bytes.Equal(got, want) {
+		t.Errorf("output differs from %s; review it, then run go test -update\n--- got ---\n%s--- want ---\n%s", golden, got, want)
 	}
 }

@@ -1,0 +1,6 @@
+# Type an opening quote: it is UNKNOWN until the string closes.
+4 4 "\""
+# Type the closing quote: the string opens and closes.
+13 13 "\""
+# Delete the closing quote: the string is open again.
+13 14
