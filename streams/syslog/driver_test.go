@@ -7,6 +7,8 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"github.com/xiam/bytescan-examples/internal/streamkit"
 	"github.com/xiam/bytescan/bytesource"
 )
@@ -29,24 +31,21 @@ func TestMsgSegments(t *testing.T) {
 		if err == io.EOF {
 			break
 		}
-		if err != nil {
-			t.Fatal(err)
-		}
+		require.NoError(t, err)
 		switch l.Type() {
 		case msg:
 			pieces++
 			if l.Len() > 5 {
-				t.Errorf("MSG piece of %d bytes, want at most 5", l.Len())
+				assert.Failf(t, "", "MSG piece of %d bytes, want at most 5", l.Len())
 			}
 			body.Write(bytesource.Bytes(l.Text()))
 		case pri:
 			frames++
 		}
 	}
-	if got, want := body.String(), strings.Repeat("ab", 11)+"z"; got != want {
-		t.Errorf("MSG bytes = %q, want %q", got, want)
+	{
+		got, want := body.String(), strings.Repeat("ab", 11)+"z"
+		assert.Equalf(t, want, got, "MSG bytes = %q, want %q", got, want)
 	}
-	if pieces != 6 || frames != 2 {
-		t.Errorf("%d MSG pieces in %d frames, want 6 pieces (5 segments and the second frame's MSG) in 2 frames", pieces, frames)
-	}
+	assert.Falsef(t, pieces != 6 || frames != 2, "%d MSG pieces in %d frames, want 6 pieces (5 segments and the second frame's MSG) in 2 frames", pieces, frames)
 }

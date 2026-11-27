@@ -9,8 +9,10 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"github.com/xiam/bytescan-examples/highlight/paint"
-	"github.com/xiam/bytescan-examples/internal/lexdump"
+	"github.com/xiam/bytescan-examples/internal/lextest"
 	"github.com/xiam/bytescan/statelex"
 )
 
@@ -25,26 +27,18 @@ type testCase struct {
 func loadCases(t *testing.T) []testCase {
 	t.Helper()
 	inputs, err := filepath.Glob(filepath.Join("testdata", "*.input"))
-	if err != nil {
-		t.Fatal(err)
-	}
-	if len(inputs) == 0 {
-		t.Fatal("no testdata/*.input files")
-	}
+	require.NoError(t, err)
+	require.NotZero(t, len(inputs), "no testdata/*.input files")
 	var cases []testCase
 	for _, input := range inputs {
 		name := strings.TrimSuffix(filepath.Base(input), ".input")
 		text, err := os.ReadFile(input)
-		if err != nil {
-			t.Fatal(err)
-		}
+		require.NoError(t, err)
 		c := testCase{name: name, text: text}
 		if f, err := os.Open(filepath.Join("testdata", name+".edits")); err == nil {
 			c.edits, err = readEdits(f)
 			f.Close()
-			if err != nil {
-				t.Fatalf("%s: %v", name, err)
-			}
+			require.NoErrorf(t, err, "%s: %v", name, err)
 		}
 		cases = append(cases, c)
 	}
@@ -57,10 +51,8 @@ func TestGolden(t *testing.T) {
 	for _, c := range loadCases(t) {
 		t.Run(c.name, func(t *testing.T) {
 			var got bytes.Buffer
-			if err := run(&got, c.text, c.edits, false); err != nil {
-				t.Fatal(err)
-			}
-			lexdump.Compare(t, filepath.Join("testdata", c.name+".golden"), got.Bytes())
+			require.NoError(t, run(&got, c.text, c.edits, false))
+			lextest.Compare(t, filepath.Join("testdata", c.name+".golden"), got.Bytes())
 		})
 	}
 }
@@ -69,14 +61,10 @@ func TestGolden(t *testing.T) {
 // testdata/document.color.golden.
 func TestColor(t *testing.T) {
 	text, err := os.ReadFile(filepath.Join("testdata", "document.input"))
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	var got bytes.Buffer
-	if err := run(&got, text, nil, true); err != nil {
-		t.Fatal(err)
-	}
-	lexdump.Compare(t, filepath.Join("testdata", "document.color.golden"), got.Bytes())
+	require.NoError(t, run(&got, text, nil, true))
+	lextest.Compare(t, filepath.Join("testdata", "document.color.golden"), got.Bytes())
 }
 
 // TestRepaint checks, after each edit of each case, that the paint that the
@@ -95,9 +83,7 @@ func TestRepaint(t *testing.T) {
 // deletions of random ranges.
 func TestRepaintGenerated(t *testing.T) {
 	text, err := os.ReadFile(filepath.Join("testdata", "document.input"))
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	pieces := []string{`"`, "/*", "*/", "*", "/", "=", "==", ".", "12", "3.5", "x", "word", " ", "\n", "@"}
 	rng := rand.New(rand.NewSource(134))
 	steps := []statelex.Edit{statelex.Insert(0, text)}
@@ -125,22 +111,24 @@ func TestRepaintGenerated(t *testing.T) {
 func checkRepaint(t *testing.T, steps []statelex.Edit) {
 	t.Helper()
 	lx, err := statelex.New(newModeSet())
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	h := &paint.Highlighter{Styles: styles}
 	for i, e := range steps {
 		ch, err := lx.Apply(e)
-		if err != nil {
-			t.Fatalf("step %d: %v", i, err)
-		}
-		if got, want := fmt.Sprint(paintIn(h.Tokens(), ch.Start, ch.OldEnd)), fmt.Sprint(ch.Removed); got != want {
-			t.Fatalf("step %d (%s): painted in [%d,%d) %s, removed %s", i, describe(e), ch.Start, ch.OldEnd, got, want)
+		require.NoErrorf(t, err, "step %d: %v", i, err)
+		{
+			got, want := fmt.Sprint(paintIn(h.Tokens(), ch.Start, ch.OldEnd)), fmt.Sprint(ch.Removed)
+			if got != want {
+				require.FailNowf(t, "", "step %d (%s): painted in [%d,%d) %s, removed %s", i, describe(e), ch.Start, ch.OldEnd, got, want)
+			}
 		}
 		h.Repaint(ch)
 		full := paintFromStart(t, lx.Text(0, lx.Len()))
-		if got, want := fmt.Sprint(h.Tokens()), fmt.Sprint(full); got != want {
-			t.Fatalf("step %d (%s): repaint\n%s\nfull paint\n%s", i, describe(e), got, want)
+		{
+			got, want := fmt.Sprint(h.Tokens()), fmt.Sprint(full)
+			if got != want {
+				require.FailNowf(t, "", "step %d (%s): repaint\n%s\nfull paint\n%s", i, describe(e), got, want)
+			}
 		}
 	}
 }
@@ -160,13 +148,9 @@ func paintIn(paint []statelex.Token, start, end int) []statelex.Token {
 func paintFromStart(t *testing.T, text []byte) []statelex.Token {
 	t.Helper()
 	lx, err := statelex.New(newModeSet())
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	ch, err := lx.Apply(statelex.Insert(0, text))
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	h := &paint.Highlighter{Styles: styles}
 	h.Repaint(ch)
 	return h.Tokens()
@@ -175,20 +159,17 @@ func paintFromStart(t *testing.T, text []byte) []statelex.Token {
 func TestReadEdits(t *testing.T) {
 	in := "# a comment\n\n12 13\n4 4 \"\\\"\"\n0 12 \"say \\\"hi\\\"\\n\"\n"
 	edits, err := readEdits(strings.NewReader(in))
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	var got []string
 	for _, e := range edits {
 		got = append(got, describe(e))
 	}
 	want := []string{`delete [12,13)`, `insert "\"" at 4`, `replace [0,12) with "say \"hi\"\n"`}
-	if fmt.Sprint(got) != fmt.Sprint(want) {
-		t.Errorf("got %q, want %q", got, want)
-	}
+	assert.Equalf(t, fmt.Sprint(want), fmt.Sprint(got), "got %q, want %q", got, want)
 	for _, bad := range []string{"x 1", "1 y", "1 2 nope"} {
-		if _, err := readEdits(strings.NewReader(bad)); err == nil {
-			t.Errorf("%q: no error", bad)
+		{
+			_, err := readEdits(strings.NewReader(bad))
+			assert.Errorf(t, err, "%q: no error", bad)
 		}
 	}
 }

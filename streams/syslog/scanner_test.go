@@ -7,14 +7,16 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"github.com/xiam/bytescan"
 	"github.com/xiam/bytescan-examples/internal/guardtest"
-	"github.com/xiam/bytescan-examples/internal/lexdump"
+	"github.com/xiam/bytescan-examples/internal/lextest"
 	"github.com/xiam/bytescan/streamtest"
 )
 
 func TestGolden(t *testing.T) {
-	lexdump.Golden(t, dumper, newScanner)
+	lextest.Golden(t, dumper, newScanner)
 }
 
 // TestGuard checks the production guard: it is streamtest.ByteGuard;
@@ -23,9 +25,7 @@ func TestGolden(t *testing.T) {
 // error and bounded memory; and a candidate longer than the guard fails Next
 // with the guard error.
 func TestGuard(t *testing.T) {
-	if tokenGuard != streamtest.ByteGuard {
-		t.Fatalf("tokenGuard = %d, want streamtest.ByteGuard (%d)", tokenGuard, streamtest.ByteGuard)
-	}
+	require.Equalf(t, streamtest.ByteGuard, tokenGuard, "tokenGuard = %d, want streamtest.ByteGuard (%d)", tokenGuard, streamtest.ByteGuard)
 	gen := streamtest.NewGenerator(80, guardtest.Filler('\n'))
 	guardtest.Bounded(t, newScanner, streamtest.Prefix(gen, []byte("<1>1 - - - - - ")), maxRun, msg)
 
@@ -43,9 +43,7 @@ func types(t *testing.T, input string) string {
 		if err == io.EOF {
 			return strings.Join(got, " ")
 		}
-		if err != nil {
-			t.Fatal(err)
-		}
+		require.NoError(t, err)
 		got = append(got, string(l.Type()))
 	}
 }
@@ -56,9 +54,7 @@ func TestLengthCountsBytes(t *testing.T) {
 	got := types(t, "21 <1>1 - - - - - - ñé<1>1 - - - - - -\n")
 	want := "MSG_LEN SP PRI VERSION SP TIMESTAMP SP HOSTNAME SP APP_NAME SP PROCID SP MSGID SP STRUCTURED_DATA SP MSG " +
 		"PRI VERSION SP TIMESTAMP SP HOSTNAME SP APP_NAME SP PROCID SP MSGID SP STRUCTURED_DATA LF"
-	if got != want {
-		t.Errorf("tokens =\n%s\nwant\n%s", got, want)
-	}
+	assert.Equalf(t, want, got, "tokens =\n%s\nwant\n%s", got, want)
 }
 
 // TestMsgPieces checks that a MSG framed by a declared length is read in
@@ -76,15 +72,13 @@ func TestMsgPieces(t *testing.T) {
 		if err == io.EOF {
 			break
 		}
-		if err != nil {
-			t.Fatal(err)
-		}
+		require.NoError(t, err)
 		if l.Type() == msg {
 			pieces = append(pieces, l.Len())
 		}
 	}
 	if len(pieces) != 2 || pieces[0] != maxPiece || pieces[1] != len(body)-maxPiece {
-		t.Errorf("MSG pieces = %v, want %d, %d", pieces, maxPiece, len(body)-maxPiece)
+		assert.Failf(t, "", "MSG pieces = %v, want %d, %d", pieces, maxPiece, len(body)-maxPiece)
 	}
 }
 
@@ -104,7 +98,5 @@ func TestReleaseBeforeRead(t *testing.T) {
 			n++
 		}
 	}
-	if n != 2 {
-		t.Errorf("lexed %d MSG, want 2", n)
-	}
+	assert.Equalf(t, 2, n, "lexed %d MSG, want 2", n)
 }

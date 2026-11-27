@@ -4,7 +4,7 @@ import (
 	"strconv"
 	"testing"
 
-	"github.com/xiam/bytescan-examples/internal/lexdump"
+	"github.com/xiam/bytescan-examples/internal/lextest"
 )
 
 // The test inputs are built here, so the testdata/*.input files are
@@ -25,7 +25,7 @@ var inputs = map[string]func() []byte{
 }
 
 func TestInputs(t *testing.T) {
-	lexdump.Inputs(t, inputs)
+	lextest.Inputs(t, inputs)
 }
 
 // msg returns a MSG line and its payload.

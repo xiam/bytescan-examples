@@ -10,13 +10,15 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"github.com/xiam/bytescan"
-	"github.com/xiam/bytescan-examples/internal/lexdump"
+	"github.com/xiam/bytescan-examples/internal/lextest"
 	"github.com/xiam/bytescan/streamtest"
 )
 
 func TestGolden(t *testing.T) {
-	lexdump.Golden(t, dumper, func(r io.Reader) *semicolons {
+	lextest.Golden(t, dumper, func(r io.Reader) *semicolons {
 		return newSemicolons(newScanner(r))
 	})
 }
@@ -80,7 +82,7 @@ func scannerStream(t *testing.T, name string, src []byte) []item {
 	fset := token.NewFileSet()
 	file := fset.AddFile(name, -1, len(src))
 	var s scanner.Scanner
-	s.Init(file, src, func(pos token.Position, msg string) { t.Errorf("%s: %s", pos, msg) }, 0)
+	s.Init(file, src, func(pos token.Position, msg string) { assert.Failf(t, "", "%s: %s", pos, msg) }, 0)
 	var items []item
 	for {
 		pos, tok, lit := s.Scan()
@@ -89,7 +91,7 @@ func scannerStream(t *testing.T, name string, src []byte) []item {
 		}
 		typ, ok := tokenTypes[tok]
 		if !ok {
-			t.Fatalf("%s: no token type for %s", fset.Position(pos), tok)
+			require.FailNowf(t, "", "%s: no token type for %s", fset.Position(pos), tok)
 		}
 		if lit == "" {
 			lit = tok.String()
@@ -106,11 +108,9 @@ func scannerStream(t *testing.T, name string, src []byte) []item {
 func goInputs(t *testing.T) []string {
 	t.Helper()
 	inputs, err := filepath.Glob(filepath.Join("testdata", "*.go.input"))
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	if len(inputs) < 3 {
-		t.Fatalf("found %d testdata/*.go.input files, want at least 3", len(inputs))
+		require.FailNowf(t, "", "found %d testdata/*.go.input files, want at least 3", len(inputs))
 	}
 	return inputs
 }
@@ -122,18 +122,16 @@ func TestScanner(t *testing.T) {
 	for _, input := range goInputs(t) {
 		t.Run(filepath.Base(input), func(t *testing.T) {
 			src, err := os.ReadFile(input)
-			if err != nil {
-				t.Fatal(err)
-			}
+			require.NoError(t, err)
 			got, want := exampleStream(t, src), scannerStream(t, input, src)
 			for i := 0; i < len(got) || i < len(want); i++ {
 				switch {
 				case i >= len(got):
-					t.Fatalf("token %d: missing, want %v", i, want[i])
+					require.FailNowf(t, "", "token %d: missing, want %v", i, want[i])
 				case i >= len(want):
-					t.Fatalf("token %d: got %v, want the end of the stream", i, got[i])
+					require.FailNowf(t, "", "token %d: got %v, want the end of the stream", i, got[i])
 				case got[i] != want[i]:
-					t.Fatalf("token %d: got %v, want %v", i, got[i], want[i])
+					require.FailNowf(t, "", "token %d: got %v, want %v", i, got[i], want[i])
 				}
 			}
 		})
@@ -183,9 +181,7 @@ func TestScannerCoverage(t *testing.T) {
 	forms := map[string]bool{}
 	for _, input := range goInputs(t) {
 		src, err := os.ReadFile(input)
-		if err != nil {
-			t.Fatal(err)
-		}
+		require.NoError(t, err)
 		for _, it := range scannerStream(t, input, src) {
 			for tok, typ := range tokenTypes {
 				if typ == it.typ && (typ == keyword || typ == operator) && tok.String() == it.text {
@@ -203,13 +199,9 @@ func TestScannerCoverage(t *testing.T) {
 		}
 	}
 	for tok, typ := range tokenTypes {
-		if (typ == keyword || typ == operator || tok == token.SEMICOLON) && !seen[tok] {
-			t.Errorf("no Go input contains %s %q", typ, tok)
-		}
+		assert.Falsef(t, (typ == keyword || typ == operator || tok == token.SEMICOLON) && !seen[tok], "no Go input contains %s %q", typ, tok)
 	}
 	for _, f := range literalForms {
-		if !forms[f.name] {
-			t.Errorf("no Go input contains a %s", f.name)
-		}
+		assert.Truef(t, forms[f.name], "no Go input contains a %s", f.name)
 	}
 }

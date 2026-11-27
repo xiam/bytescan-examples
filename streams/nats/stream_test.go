@@ -8,6 +8,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/stretchr/testify/require"
 	"github.com/xiam/bytescan"
 	"github.com/xiam/bytescan/bytesource"
 	"github.com/xiam/bytescan/streamtest"
@@ -19,13 +20,9 @@ import (
 // rounded up to a multiple of streamtest.ByteGuard.
 func TestGuard(t *testing.T) {
 	sizePair := 2*maxSizeDigits + 2*maxRun + len("\r\n")
-	if sizePair != 2022 {
-		t.Fatalf("the lookahead of sizePairRule reads %d bytes, want 2022", sizePair)
-	}
+	require.Equalf(t, 2022, sizePair, "the lookahead of sizePairRule reads %d bytes, want 2022", sizePair)
 	want := (sizePair + streamtest.ByteGuard - 1) / streamtest.ByteGuard * streamtest.ByteGuard
-	if tokenGuard != want {
-		t.Fatalf("tokenGuard = %d, want %d: %d bytes rounded up to a multiple of streamtest.ByteGuard (%d)", tokenGuard, want, sizePair, streamtest.ByteGuard)
-	}
+	require.Equalf(t, want, tokenGuard, "tokenGuard = %d, want %d: %d bytes rounded up to a multiple of streamtest.ByteGuard (%d)", tokenGuard, want, sizePair, streamtest.ByteGuard)
 }
 
 // serverStream generates an endless server-to-client stream: an INFO, then
@@ -126,7 +123,7 @@ func (c *payloadCounter) add(l *bytescan.Token) {
 		c.header += int64(l.Len())
 	}
 	if l.Len() > maxPiece {
-		c.t.Fatalf("%s at %d is %d bytes, want at most %d", l.Type(), l.Offset(), l.Len(), maxPiece)
+		require.FailNowf(c.t, "", "%s at %d is %d bytes, want at most %d", l.Type(), l.Offset(), l.Len(), maxPiece)
 	}
 }
 
@@ -156,18 +153,20 @@ func TestLongRun(t *testing.T) {
 	gen := streamtest.NewGenerator(1, s.record)
 	c := &payloadCounter{t: t}
 	res := streamtest.Run(t, newScanner, gen, ceiling(gen.Budget()), streamtest.WithTokenFunc(c.add))
-	if got := res.Counts[op]; got != s.ops {
-		t.Fatalf("lexed %d OP, want one per line (%d)", got, s.ops)
+	{
+		got := res.Counts[op]
+		require.Equalf(t, s.ops, got, "lexed %d OP, want one per line (%d)", got, s.ops)
 	}
-	if got := res.Counts[bytescan.TokenTypeUnknown]; got != 0 {
-		t.Fatalf("lexed %d UNKNOWN in a clean stream", got)
+	{
+		got := res.Counts[bytescan.TokenTypeUnknown]
+		require.Zerof(t, got, "lexed %d UNKNOWN in a clean stream", got)
 	}
 	if c.payload != s.payloadBytes || c.header != s.headerBytes {
-		t.Fatalf("PAYLOAD and HEADERS hold %d and %d bytes, the stream has %d and %d",
+		require.FailNowf(t, "", "PAYLOAD and HEADERS hold %d and %d bytes, the stream has %d and %d",
 			c.payload, c.header, s.payloadBytes, s.headerBytes)
 	}
 	if res.Bytes != gen.Bytes() {
-		t.Fatalf("Run read %d bytes, the generator wrote %d", res.Bytes, gen.Bytes())
+		require.FailNowf(t, "", "Run read %d bytes, the generator wrote %d", res.Bytes, gen.Bytes())
 	}
 }
 
@@ -193,7 +192,7 @@ func TestCorruption(t *testing.T) {
 		if !have || off >= cur.Offset+int64(cur.Len) {
 			if have && off == cur.Offset+int64(cur.Len) {
 				if l.Type() != op {
-					t.Fatalf("after the garbage at %d: got %s %q, want OP", cur.Offset, l.Type(), l.Text())
+					require.FailNowf(t, "", "after the garbage at %d: got %s %q, want OP", cur.Offset, l.Type(), l.Text())
 				}
 				resumed++
 			}
@@ -201,21 +200,20 @@ func TestCorruption(t *testing.T) {
 		}
 		inside := have && off >= cur.Offset && off < cur.Offset+int64(cur.Len)
 		if inside != (l.Type() == bytescan.TokenTypeUnknown) {
-			t.Fatalf("at %d: got %s %q, garbage run here: %v", off, l.Type(), l.Text(), inside)
+			require.FailNowf(t, "", "at %d: got %s %q, garbage run here: %v", off, l.Type(), l.Text(), inside)
 		}
 		if inside {
 			unknown++
 		}
 	}
 	res := streamtest.Run(t, newScanner, c, ceiling(c.Budget()), streamtest.WithTokenFunc(check))
-	if res.Counts[bytescan.TokenTypeUnknown] != unknown || unknown == 0 {
-		t.Fatalf("lexed %d UNKNOWN, %d inside garbage runs", res.Counts[bytescan.TokenTypeUnknown], unknown)
-	}
+	require.Falsef(t, res.Counts[bytescan.TokenTypeUnknown] != unknown || unknown == 0, "lexed %d UNKNOWN, %d inside garbage runs", res.Counts[bytescan.TokenTypeUnknown], unknown)
 	if resumed != int64(c.Injected()) {
-		t.Fatalf("resumed at an OP after %d of %d garbage runs", resumed, c.Injected())
+		require.FailNowf(t, "", "resumed at an OP after %d of %d garbage runs", resumed, c.Injected())
 	}
-	if got := res.Counts[op]; got != s.ops {
-		t.Fatalf("lexed %d OP, want one per line (%d)", got, s.ops)
+	{
+		got := res.Counts[op]
+		require.Equalf(t, s.ops, got, "lexed %d OP, want one per line (%d)", got, s.ops)
 	}
 	t.Logf("%d garbage runs, %d UNKNOWN tokens", c.Injected(), unknown)
 }
@@ -236,11 +234,13 @@ func TestCorruptSize(t *testing.T) {
 	gen := streamtest.NewGenerator(5, once, streamtest.WithBudget(1))
 	c := &payloadCounter{t: t}
 	res := streamtest.Run(t, newScanner, gen, streamtest.WithTokenFunc(c.add))
-	if want := int64(body - len("MSG a 1 9999999999\r\n")); c.payload != want {
-		t.Fatalf("PAYLOAD holds %d bytes, want %d", c.payload, want)
+	{
+		want := int64(body - len("MSG a 1 9999999999\r\n"))
+		require.Equalf(t, want, c.payload, "PAYLOAD holds %d bytes, want %d", c.payload, want)
 	}
-	if got, want := res.Counts[payload], int64((body+maxPiece-1)/maxPiece); got != want {
-		t.Fatalf("lexed %d PAYLOAD, want %d", got, want)
+	{
+		got, want := res.Counts[payload], int64((body+maxPiece-1)/maxPiece)
+		require.Equalf(t, want, got, "lexed %d PAYLOAD, want %d", got, want)
 	}
 }
 
@@ -317,23 +317,22 @@ func TestUndelimited(t *testing.T) {
 				}
 				started = true
 				if ended || l.Type() != tt.typ {
-					t.Fatalf("at %d: got %s, want a %s piece of the run", l.Offset(), l.Type(), tt.typ)
+					require.FailNowf(t, "", "at %d: got %s, want a %s piece of the run", l.Offset(), l.Type(), tt.typ)
 				}
 				if l.Len() > maxRun {
-					t.Fatalf("at %d: %s piece of %d bytes, want at most %d", l.Offset(), l.Type(), l.Len(), maxRun)
+					require.FailNowf(t, "", "at %d: %s piece of %d bytes, want at most %d", l.Offset(), l.Type(), l.Len(), maxRun)
 				}
 				pieces++
 				got = append(got, bytesource.Bytes(l.Text())...)
 			}
 			streamtest.Run(t, newScanner, streamtest.NewGenerator(1, record, streamtest.WithBudget(1)), streamtest.WithTokenFunc(check))
 			if !bytes.Equal(got, tt.run) {
-				t.Fatalf("the pieces hold %d bytes, want the run of %d", len(got), n)
+				require.FailNowf(t, "", "the pieces hold %d bytes, want the run of %d", len(got), n)
 			}
-			if pieces < n/maxRun {
-				t.Fatalf("%d pieces, want at least %d", pieces, n/maxRun)
-			}
-			if tail := strings.Join(ls[len(ls)-3:], " "); tail != "CRLF OP CRLF" {
-				t.Fatalf("the stream ends with %s, want CRLF OP CRLF", tail)
+			require.GreaterOrEqualf(t, pieces, n/maxRun, "%d pieces, want at least %d", pieces, n/maxRun)
+			{
+				tail := strings.Join(ls[len(ls)-3:], " ")
+				require.Equalf(t, "CRLF OP CRLF", tail, "the stream ends with %s, want CRLF OP CRLF", tail)
 			}
 		})
 	}

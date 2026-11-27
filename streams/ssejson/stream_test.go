@@ -8,6 +8,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"github.com/xiam/bytescan"
 	"github.com/xiam/bytescan-examples/streams/sse/ssedriver"
 	"github.com/xiam/bytescan/streamtest"
@@ -44,11 +46,13 @@ func TestLongRun(t *testing.T) {
 	}
 	src := streamtest.NewGenerator(1, eventRecord)
 	res := streamtest.Run(t, newL, src, streamtest.WithCeiling(ceiling(src.Budget())), streamtest.WithTokenFunc(jsonLengthCheck(t)))
-	if after := goroutines(); after != before {
-		t.Errorf("%d goroutines after the run, %d before", after, before)
+	{
+		after := goroutines()
+		assert.Equalf(t, before, after, "%d goroutines after the run, %d before", after, before)
 	}
-	if n := res.Counts[unknown]; n != 0 {
-		t.Errorf("%d UNKNOWN tokens, want none", n)
+	{
+		n := res.Counts[unknown]
+		assert.Zerof(t, n, "%d UNKNOWN tokens, want none", n)
 	}
 	for _, typ := range []bytescan.TokenType{
 		ssedriver.Event, ssedriver.Data, ssedriver.ID, ssedriver.Retry, ssedriver.Field, ssedriver.Colon,
@@ -56,15 +60,11 @@ func TestLongRun(t *testing.T) {
 		jsonBeginArray, jsonEndArray, jsonBeginObject, jsonEndObject, jsonNameSeparator, jsonValueSeparator,
 		jsonTrue, jsonFalse, jsonNull, jsonNumber, jsonWhitespace, jsonEOL, jsonQuote, jsonStringText, jsonEscape,
 	} {
-		if res.Counts[typ] == 0 {
-			t.Errorf("no %s token in the stream", typ)
-		}
+		assert.NotZerof(t, res.Counts[typ], "no %s token in the stream", typ)
 	}
 	p := d.pipe
 	t.Logf("max queue %d tokens, %d runes; %d keep-alives", p.maxTokens, p.maxRunes, p.keepAlives)
-	if p.maxTokens > worstTokens || p.maxRunes > worstRunes {
-		t.Errorf("queue of %d tokens or %d runes, above the worst case of %d tokens or %d runes", p.maxTokens, p.maxRunes, worstTokens, worstRunes)
-	}
+	assert.Falsef(t, p.maxTokens > worstTokens || p.maxRunes > worstRunes, "queue of %d tokens or %d runes, above the worst case of %d tokens or %d runes", p.maxTokens, p.maxRunes, worstTokens, worstRunes)
 }
 
 // The two kinds of garbage that TestCorruption injects between records.
@@ -137,9 +137,7 @@ func TestCorruption(t *testing.T) {
 		}
 		for len(*mine) == 0 {
 			l, err := clean.Next()
-			if err != nil {
-				t.Fatalf("clean stream: %v", err)
-			}
+			require.NoErrorf(t, err, "clean stream: %v", err)
 			if !isSSE(l) && !isDoc(l) {
 				continue
 			}
@@ -165,13 +163,13 @@ func TestCorruption(t *testing.T) {
 			switch {
 			case l.Type() == unknown:
 				if !strings.ContainsRune(junkAlphabet+"�", []rune(l.Text())[0]) {
-					t.Fatalf("UNKNOWN token %q, not from the junk alphabet", l.Text())
+					require.FailNowf(t, "", "UNKNOWN token %q, not from the junk alphabet", l.Text())
 				}
 				unknowns++
 			case l.Type() != jsonEOL:
 				cl := next(false)
 				if cl.Type() != l.Type() || cl.Text() != l.Text() {
-					t.Fatalf("after %d garbage runs: JSON layer got %s %q, want %s %q", seen, l.Type(), l.Text(), cl.Type(), cl.Text())
+					require.FailNowf(t, "", "after %d garbage runs: JSON layer got %s %q, want %s %q", seen, l.Type(), l.Text(), cl.Type(), cl.Text())
 				}
 				compared++
 			}
@@ -183,9 +181,7 @@ func TestCorruption(t *testing.T) {
 		}
 		off := int64(l.ByteOffset())
 		if haveInj && off >= inj.Offset {
-			if skipping {
-				t.Fatalf("garbage run %d at byte %d starts before the line of the run before it ends", seen+1, inj.Offset)
-			}
+			require.Falsef(t, skipping, "garbage run %d at byte %d starts before the line of the run before it ends", seen+1, inj.Offset)
 			if !kinds[seen] {
 				// The clean stream skips the first line of the record.
 				for !isLineEnd(next(true)) {
@@ -204,7 +200,7 @@ func TestCorruption(t *testing.T) {
 		}
 		cl := next(true)
 		if cl.Type() != l.Type() || cl.Text() != l.Text() || int64(cl.ByteOffset())+shift != off {
-			t.Fatalf("after %d garbage runs: SSE layer got %s %q at byte %d, want %s %q at byte %d",
+			require.FailNowf(t, "", "after %d garbage runs: SSE layer got %s %q at byte %d, want %s %q at byte %d",
 				seen, l.Type(), l.Text(), off, cl.Type(), cl.Text(), int64(cl.ByteOffset())+shift)
 		}
 		compared++
@@ -215,22 +211,19 @@ func TestCorruption(t *testing.T) {
 		if err == io.EOF {
 			break
 		}
-		if err != nil {
-			t.Fatal(err)
-		}
+		require.NoError(t, err)
 		if isSSE(l) || isDoc(l) {
 			pendingSSE = append(pendingSSE, l)
 		}
 	}
-	if n := len(pendingSSE) + len(pendingJSON); n > 0 {
-		t.Errorf("the clean stream has %d more tokens than the corrupted one", n)
+	{
+		n := len(pendingSSE) + len(pendingJSON)
+		assert.LessOrEqualf(t, n, 0, "the clean stream has %d more tokens than the corrupted one", n)
 	}
 	if seen == 0 || seen != c.Injected() {
-		t.Errorf("reached %d garbage runs, %d injected", seen, c.Injected())
+		assert.Failf(t, "", "reached %d garbage runs, %d injected", seen, c.Injected())
 	}
-	if unknowns == 0 {
-		t.Error("no UNKNOWN token in the JSON layer")
-	}
+	assert.NotZero(t, unknowns, "no UNKNOWN token in the JSON layer")
 	t.Logf("%d garbage runs: %d UNKNOWN tokens in the JSON layer, %d of %d tokens equal to the clean stream; at most %d clean tokens held for the other layer",
 		seen, unknowns, compared, res.Tokens, maxAhead)
 }
@@ -259,7 +252,7 @@ func TestUndelimited(t *testing.T) {
 	streamtest.Run(t, newScanner, streamtest.NewGenerator(0, record, streamtest.WithBudget(budget)),
 		streamtest.WithCeiling(ceiling(budget)), streamtest.WithTokenFunc(func(l *bytescan.Token) {
 			if l.Len() > maxRun {
-				t.Fatalf("%s token of %d runes, more than %d", l.Type(), l.Len(), maxRun)
+				require.FailNowf(t, "", "%s token of %d runes, more than %d", l.Type(), l.Len(), maxRun)
 			}
 			switch l.Type() {
 			case ssedriver.Value:
@@ -269,12 +262,10 @@ func TestUndelimited(t *testing.T) {
 				textBytes += int64(len(l.Text()))
 			case ssedriver.Data, ssedriver.Colon, ssedriver.Space, jsonQuote:
 			default:
-				t.Fatalf("unexpected %s token %.20q", l.Type(), l.Text())
+				require.FailNowf(t, "", "unexpected %s token %.20q", l.Type(), l.Text())
 			}
 		}))
-	if textBytes < 16<<10 {
-		t.Fatalf("the string is %d bytes, want at least 16 KiB", textBytes)
-	}
+	require.GreaterOrEqualf(t, textBytes, int64(16<<10), "the string is %d bytes, want at least 16 KiB", textBytes)
 	t.Logf("a %d-byte string in %d VALUE pieces and %d JSON_STRING_TEXT pieces", textBytes, values, texts)
 }
 
@@ -298,31 +289,25 @@ func TestLongNumber(t *testing.T) {
 			if err == io.EOF {
 				break
 			}
-			if err != nil {
-				t.Fatal(err)
-			}
+			require.NoError(t, err)
 			if !isJSON(l.Type()) || l.Type() == jsonEOL {
 				continue
 			}
 			if l.Len() > maxRun {
-				t.Fatalf("%s token of %d runes, more than %d", l.Type(), l.Len(), maxRun)
+				require.FailNowf(t, "", "%s token of %d runes, more than %d", l.Type(), l.Len(), maxRun)
 			}
 			types = append(types, string(l.Type()))
 			if l.Type() == jsonNumber {
 				got = append(got, l.Len())
 			}
 		}
-		if len(got) < len(c.want) || !equalInts(got[:len(c.want)], c.want) {
-			t.Errorf("%.30q: JSON_NUMBER lengths %v, want %v first (types %v)", c.in, got, c.want, types)
-		}
+		assert.Falsef(t, len(got) < len(c.want) || !equalInts(got[:len(c.want)], c.want), "%.30q: JSON_NUMBER lengths %v, want %v first (types %v)", c.in, got, c.want, types)
 		if len(types) < len(c.want) {
-			t.Errorf("%.30q: tokens %v", c.in, types)
+			assert.Failf(t, "", "%.30q: tokens %v", c.in, types)
 			continue
 		}
 		for i := range c.want {
-			if types[i] != string(jsonNumber) {
-				t.Errorf("%.30q: token %d is %s, want JSON_NUMBER (types %v)", c.in, i, types[i], types)
-			}
+			assert.Equalf(t, string(jsonNumber), types[i], "%.30q: token %d is %s, want JSON_NUMBER (types %v)", c.in, i, types[i], types)
 		}
 	}
 }

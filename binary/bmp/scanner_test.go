@@ -4,13 +4,14 @@ import (
 	"bytes"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
 	"github.com/xiam/bytescan-examples/internal/hexdump"
-	"github.com/xiam/bytescan-examples/internal/lexdump"
+	"github.com/xiam/bytescan-examples/internal/lextest"
 	"github.com/xiam/bytescan/streamtest"
 )
 
 func TestGolden(t *testing.T) {
-	lexdump.Golden(t, hexdump.Dumper, newScanner)
+	lextest.Golden(t, hexdump.Dumper, newScanner)
 }
 
 // TestPixelDataPieces checks that the pixel data, which runs to the end of the
@@ -29,18 +30,17 @@ func TestPixelDataPieces(t *testing.T) {
 			continue
 		}
 		if l.Offset() != 54+sum {
-			t.Errorf("piece %d at offset %d, want %d", pieces, l.Offset(), 54+sum)
+			assert.Failf(t, "", "piece %d at offset %d, want %d", pieces, l.Offset(), 54+sum)
 		}
 		if l.Len() > maxPiece {
-			t.Errorf("piece %d has %d bytes, more than %d", pieces, l.Len(), maxPiece)
+			assert.Failf(t, "", "piece %d has %d bytes, more than %d", pieces, l.Len(), maxPiece)
 		}
 		pieces++
 		sum += l.Len()
 	}
-	if sum != size {
-		t.Errorf("PIXEL_DATA pieces hold %d bytes, want %d", sum, size)
-	}
-	if want := (size + maxPiece - 1) / maxPiece; pieces != want {
-		t.Errorf("%d PIXEL_DATA pieces, want %d", pieces, want)
+	assert.Equalf(t, size, sum, "PIXEL_DATA pieces hold %d bytes, want %d", sum, size)
+	{
+		want := (size + maxPiece - 1) / maxPiece
+		assert.Equalf(t, want, pieces, "%d PIXEL_DATA pieces, want %d", pieces, want)
 	}
 }

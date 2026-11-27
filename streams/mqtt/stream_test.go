@@ -5,6 +5,8 @@ import (
 	"math/rand"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"github.com/xiam/bytescan"
 	"github.com/xiam/bytescan/streamtest"
 )
@@ -83,11 +85,14 @@ func record(c *tally) streamtest.RecordFunc {
 // the end of the last token.
 func contiguous(t *testing.T, pos *int64, fn func(*bytescan.Token)) streamtest.Option {
 	return streamtest.WithTokenFunc(func(l *bytescan.Token) {
-		if off := int64(l.Offset()); off != *pos {
-			t.Fatalf("%s at %d, want the next token at %d", l.Type(), off, *pos)
+		{
+			off := int64(l.Offset())
+			if off != *pos {
+				require.FailNowf(t, "", "%s at %d, want the next token at %d", l.Type(), off, *pos)
+			}
 		}
 		if l.Len() > maxPiece {
-			t.Fatalf("%s of %d bytes at %d, longer than a piece", l.Type(), l.Len(), l.Offset())
+			require.FailNowf(t, "", "%s of %d bytes at %d, longer than a piece", l.Type(), l.Len(), l.Offset())
 		}
 		*pos += int64(l.Len())
 		if fn != nil {
@@ -136,7 +141,7 @@ func TestLongRun(t *testing.T) {
 		}
 	}))
 	if pos != res.Bytes || res.Bytes != gen.Bytes() {
-		t.Errorf("tokens end at %d, Run read %d bytes, the generator wrote %d", pos, res.Bytes, gen.Bytes())
+		assert.Failf(t, "", "tokens end at %d, Run read %d bytes, the generator wrote %d", pos, res.Bytes, gen.Bytes())
 	}
 	for _, w := range []struct {
 		typ  bytescan.TokenType
@@ -148,17 +153,14 @@ func TestLongRun(t *testing.T) {
 		{body, c.bodies},
 		{unknown, 0},
 	} {
-		if got := res.Counts[w.typ]; got != w.want {
-			t.Errorf("lexed %d %s, want %d", got, w.typ, w.want)
+		{
+			got := res.Counts[w.typ]
+			assert.Equalf(t, w.want, got, "lexed %d %s, want %d", got, w.typ, w.want)
 		}
 	}
-	if res.Counts[payload] == 0 {
-		t.Error("lexed no PAYLOAD")
-	}
+	assert.NotZero(t, res.Counts[payload], "lexed no PAYLOAD")
 	for w := 1; w <= maxLengthBytes; w++ {
-		if widths[w] == 0 {
-			t.Errorf("no REMAINING_LENGTH of %d bytes; widths = %v", w, widths[1:])
-		}
+		assert.NotZerof(t, widths[w], "no REMAINING_LENGTH of %d bytes; widths = %v", w, widths[1:])
 	}
 	t.Logf("%d packets, %d PUBLISH; REMAINING_LENGTH widths 1-4: %v", c.records, c.publishes, widths[1:])
 }
@@ -216,32 +218,28 @@ func TestCorruption(t *testing.T) {
 			}
 			switch {
 			case !have || off < in.Offset:
-				if l.Type() == unknown {
-					t.Fatalf("UNKNOWN at %d, outside the garbage", off)
-				}
+				require.NotEqualf(t, unknown, l.Type(), "UNKNOWN at %d, outside the garbage", off)
 			case off == in.Offset:
 				if l.Type() != fixedHeader {
-					t.Fatalf("%s at the garbage start %d, want FIXED_HEADER", l.Type(), off)
+					require.FailNowf(t, "", "%s at the garbage start %d, want FIXED_HEADER", l.Type(), off)
 				}
 			default:
 				if l.Type() != unknown || l.Len() != 1 {
-					t.Fatalf("%s of %d bytes at %d inside the garbage (%d bytes at %d), want one UNKNOWN byte", l.Type(), l.Len(), off, in.Len, in.Offset)
+					require.FailNowf(t, "", "%s of %d bytes at %d inside the garbage (%d bytes at %d), want one UNKNOWN byte", l.Type(), l.Len(), off, in.Len, in.Offset)
 				}
 				garbage++
 			}
 		}))
-		if pos != res.Bytes {
-			t.Errorf("tokens end at %d, want the end of the stream at %d", pos, res.Bytes)
-		}
+		assert.Equalf(t, res.Bytes, pos, "tokens end at %d, want the end of the stream at %d", pos, res.Bytes)
 		runs := int64(src.Injected())
-		if runs == 0 {
-			t.Fatal("no garbage runs")
+		require.NotZero(t, runs, "no garbage runs")
+		{
+			got, want := res.Counts[fixedHeader], c.records+runs
+			assert.Equalf(t, want, got, "lexed %d FIXED_HEADER, want one per packet and one per garbage run (%d)", got, want)
 		}
-		if got, want := res.Counts[fixedHeader], c.records+runs; got != want {
-			t.Errorf("lexed %d FIXED_HEADER, want one per packet and one per garbage run (%d)", got, want)
-		}
-		if got := res.Counts[unknown]; got != garbage {
-			t.Errorf("lexed %d UNKNOWN, %d of them inside garbage", got, garbage)
+		{
+			got := res.Counts[unknown]
+			assert.Equalf(t, garbage, got, "lexed %d UNKNOWN, %d of them inside garbage", got, garbage)
 		}
 		t.Logf("%d packets, %d garbage runs, %d UNKNOWN", c.records, runs, garbage)
 	})
@@ -266,22 +264,14 @@ func TestCorruption(t *testing.T) {
 				after++
 				return
 			}
-			if l.Type() == unknown {
-				t.Fatalf("UNKNOWN at %d, before the first garbage run", off)
-			}
+			require.NotEqualf(t, unknown, l.Type(), "UNKNOWN at %d, before the first garbage run", off)
 			if l.Type() == fixedHeader {
 				headers++
 			}
 		}))
-		if pos != res.Bytes {
-			t.Errorf("tokens end at %d, want the end of the stream at %d", pos, res.Bytes)
-		}
-		if !have {
-			t.Fatal("no garbage runs")
-		}
-		if headers != int64(first.Record) {
-			t.Errorf("lexed %d FIXED_HEADER before the first garbage run, want one per packet (%d)", headers, first.Record)
-		}
+		assert.Equalf(t, res.Bytes, pos, "tokens end at %d, want the end of the stream at %d", pos, res.Bytes)
+		require.True(t, have, "no garbage runs")
+		assert.Equalf(t, int64(first.Record), headers, "lexed %d FIXED_HEADER before the first garbage run, want one per packet (%d)", headers, first.Record)
 		t.Logf("%d packets, %d garbage runs; the first at %d after %d packets; %d tokens from it to the end of the stream at %d, %d UNKNOWN",
 			c.records, src.Injected(), first.Offset, first.Record, after, res.Bytes, res.Counts[unknown])
 	})
@@ -330,7 +320,7 @@ func TestMaxLength(t *testing.T) {
 				off := int64(l.Offset())
 				switch {
 				case off == at && l.Type() != fixedHeader, off == at+1 && l.Type() != remainingLength:
-					t.Fatalf("%s at %d, want the packet with the maximal length", l.Type(), off)
+					require.FailNowf(t, "", "%s at %d, want the packet with the maximal length", l.Type(), off)
 				case off < fields:
 					return
 				}
@@ -338,12 +328,10 @@ func TestMaxLength(t *testing.T) {
 					next++
 				}
 				if next == len(tc.types) {
-					t.Fatalf("%s at %d, want a piece of %v", l.Type(), off, tc.types)
+					require.FailNowf(t, "", "%s at %d, want a piece of %v", l.Type(), off, tc.types)
 				}
 			}), streamtest.WithSampleEvery(warmUp))
-			if pos != res.Bytes {
-				t.Errorf("tokens end at %d, want the end of the stream at %d", pos, res.Bytes)
-			}
+			assert.Equalf(t, res.Bytes, pos, "tokens end at %d, want the end of the stream at %d", pos, res.Bytes)
 		})
 	}
 }
@@ -366,16 +354,14 @@ func TestHighRun(t *testing.T) {
 		switch {
 		case off == at:
 			if l.Type() != fixedHeader {
-				t.Fatalf("%s at the run start %d, want FIXED_HEADER", l.Type(), off)
+				require.FailNowf(t, "", "%s at the run start %d, want FIXED_HEADER", l.Type(), off)
 			}
 		case off > at && off < at+n:
 			if l.Type() != unknown || l.Len() != 1 {
-				t.Fatalf("%s of %d bytes at %d in the run, want one UNKNOWN byte", l.Type(), l.Len(), off)
+				require.FailNowf(t, "", "%s of %d bytes at %d in the run, want one UNKNOWN byte", l.Type(), l.Len(), off)
 			}
 			seen++
 		}
 	}), streamtest.WithSampleEvery(warmUp))
-	if seen != n-1 {
-		t.Errorf("lexed %d UNKNOWN in the run, want %d", seen, n-1)
-	}
+	assert.Equalf(t, int64(n-1), seen, "lexed %d UNKNOWN in the run, want %d", seen, n-1)
 }

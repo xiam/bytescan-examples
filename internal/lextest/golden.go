@@ -1,4 +1,6 @@
-package lexdump
+// Package lextest provides golden-file and input checks for example tests.
+// Production programs use lexdump without importing this test support package.
+package lextest
 
 import (
 	"bytes"
@@ -9,7 +11,10 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"github.com/xiam/bytescan"
+	"github.com/xiam/bytescan-examples/internal/lexdump"
 )
 
 // update is the -update test flag. It is registered only in test binaries, so
@@ -26,27 +31,22 @@ var update = func() *bool {
 // output with the .golden file of the same name. With go test -update it
 // writes the output to the golden file first. It fails the test if there is no
 // input file.
-func Golden[L bytescan.Source](t *testing.T, d Dumper, newScanner func(io.Reader) L) {
+func Golden[L bytescan.Source](t *testing.T, d lexdump.Dumper, newScanner func(io.Reader) L) {
 	t.Helper()
 	inputs, err := filepath.Glob(filepath.Join("testdata", "*.input"))
-	if err != nil {
-		t.Fatal(err)
-	}
-	if len(inputs) == 0 {
-		t.Fatal("no testdata/*.input files")
-	}
+	require.NoError(t, err)
+	require.NotZero(t, len(inputs), "no testdata/*.input files")
 	for _, input := range inputs {
 		golden := strings.TrimSuffix(input, ".input") + ".golden"
 		t.Run(filepath.Base(input), func(t *testing.T) {
 			f, err := os.Open(input)
-			if err != nil {
-				t.Fatal(err)
-			}
+			require.NoError(t, err)
 			defer f.Close()
 
 			var got bytes.Buffer
-			if err := d.Dump(&got, newScanner(f)); err != nil {
-				t.Fatalf("dump %s: %v", input, err)
+			{
+				err := d.Dump(&got, newScanner(f))
+				require.NoErrorf(t, err, "dump %s: %v", input, err)
 			}
 			Compare(t, golden, got.Bytes())
 		})
@@ -59,15 +59,9 @@ func Golden[L bytescan.Source](t *testing.T, d Dumper, newScanner func(io.Reader
 func Compare(t *testing.T, golden string, got []byte) {
 	t.Helper()
 	if *update {
-		if err := os.WriteFile(golden, got, 0o644); err != nil {
-			t.Fatal(err)
-		}
+		require.NoError(t, os.WriteFile(golden, got, 0o644))
 	}
 	want, err := os.ReadFile(golden)
-	if err != nil {
-		t.Fatalf("%v (run go test -update to create it)", err)
-	}
-	if !bytes.Equal(got, want) {
-		t.Errorf("output differs from %s; review it, then run go test -update\n--- got ---\n%s--- want ---\n%s", golden, got, want)
-	}
+	require.NoErrorf(t, err, "%v (run go test -update to create it)", err)
+	assert.Truef(t, bytes.Equal(got, want), "output differs from %s; review it, then run go test -update\n--- got ---\n%s--- want ---\n%s", golden, got, want)
 }

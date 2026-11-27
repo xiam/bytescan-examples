@@ -5,6 +5,8 @@ import (
 	"math/rand"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"github.com/xiam/bytescan"
 	"github.com/xiam/bytescan/streamtest"
 )
@@ -150,16 +152,16 @@ func (c *checker) check(l *bytescan.Token) {
 	t := c.t
 	off, n := int64(l.Offset()), int64(l.Len())
 	if off != c.next {
-		t.Fatalf("%s at %d, want the next token at %d", l.Type(), off, c.next)
+		require.FailNowf(t, "", "%s at %d, want the next token at %d", l.Type(), off, c.next)
 	}
 	c.next = off + n
 	if !c.inner {
 		if len(c.gen.frames) == 0 {
-			t.Fatalf("%s at %d after the last frame", l.Type(), off)
+			require.FailNowf(t, "", "%s at %d after the last frame", l.Type(), off)
 		}
 		c.cur, c.gen.frames = c.gen.frames[0], c.gen.frames[1:]
 		if l.Type() != frameHeader || off != c.cur.offset || n != headerSize {
-			t.Fatalf("%s of %d bytes at %d, want FRAME_HEADER at %d", l.Type(), n, off, c.cur.offset)
+			require.FailNowf(t, "", "%s of %d bytes at %d, want FRAME_HEADER at %d", l.Type(), n, off, c.cur.offset)
 		}
 		c.ext, c.key, c.left = c.cur.ext > 0, c.cur.masked, c.cur.length
 		c.inner = c.ext || c.key || c.left > 0
@@ -168,17 +170,20 @@ func (c *checker) check(l *bytescan.Token) {
 	switch {
 	case c.ext:
 		if l.Type() != extendedLength || n != int64(c.cur.ext) {
-			t.Fatalf("%s of %d bytes at %d, want EXTENDED_LENGTH of %d", l.Type(), n, off, c.cur.ext)
+			require.FailNowf(t, "", "%s of %d bytes at %d, want EXTENDED_LENGTH of %d", l.Type(), n, off, c.cur.ext)
 		}
 		c.ext = false
 	case c.key:
 		if l.Type() != maskingKey || n != keySize {
-			t.Fatalf("%s of %d bytes at %d, want MASKING_KEY", l.Type(), n, off)
+			require.FailNowf(t, "", "%s of %d bytes at %d, want MASKING_KEY", l.Type(), n, off)
 		}
 		c.key = false
 	default:
-		if want := min(c.left, maxPiece); l.Type() != payload || n != want {
-			t.Fatalf("%s of %d bytes at %d, want PAYLOAD of %d", l.Type(), n, off, want)
+		{
+			want := min(c.left, maxPiece)
+			if l.Type() != payload || n != want {
+				require.FailNowf(t, "", "%s of %d bytes at %d, want PAYLOAD of %d", l.Type(), n, off, want)
+			}
 		}
 		c.left -= n
 	}
@@ -198,23 +203,25 @@ func TestLongRun(t *testing.T) {
 		streamtest.WithTokenFunc(c.check),
 		streamtest.WithCeiling(streamtest.DefaultCeiling(gen.Budget())+pieceHeap))
 	if c.inner || len(g.frames) != 0 {
-		t.Errorf("the tokens end inside a frame, or %d frames are not lexed", len(g.frames))
+		assert.Failf(t, "", "the tokens end inside a frame, or %d frames are not lexed", len(g.frames))
 	}
-	if got := res.Counts[frameHeader]; got != g.count {
-		t.Errorf("FRAME_HEADER tokens = %d, want one per frame, %d", got, g.count)
+	{
+		got := res.Counts[frameHeader]
+		assert.Equalf(t, g.count, got, "FRAME_HEADER tokens = %d, want one per frame, %d", got, g.count)
 	}
-	if got, want := res.Counts[extendedLength], g.kinds[1]+g.kinds[2]; got != want {
-		t.Errorf("EXTENDED_LENGTH tokens = %d, want %d", got, want)
+	{
+		got, want := res.Counts[extendedLength], g.kinds[1]+g.kinds[2]
+		assert.Equalf(t, want, got, "EXTENDED_LENGTH tokens = %d, want %d", got, want)
 	}
-	if got := res.Counts[maskingKey]; got != g.masked {
-		t.Errorf("MASKING_KEY tokens = %d, want %d", got, g.masked)
+	{
+		got := res.Counts[maskingKey]
+		assert.Equalf(t, g.masked, got, "MASKING_KEY tokens = %d, want %d", got, g.masked)
 	}
-	if n := res.Counts[bytescan.TokenTypeUnknown]; n != 0 {
-		t.Errorf("UNKNOWN tokens = %d, want 0", n)
+	{
+		n := res.Counts[bytescan.TokenTypeUnknown]
+		assert.Zerof(t, n, "UNKNOWN tokens = %d, want 0", n)
 	}
-	if g.kinds[0] == 0 || g.kinds[1] == 0 || g.kinds[2] == 0 || g.masked == 0 || g.masked == g.count {
-		t.Errorf("frames by length width %v, %d of %d masked: want every width, masked and unmasked", g.kinds, g.masked, g.count)
-	}
+	assert.Falsef(t, g.kinds[0] == 0 || g.kinds[1] == 0 || g.kinds[2] == 0 || g.masked == 0 || g.masked == g.count, "frames by length width %v, %d of %d masked: want every width, masked and unmasked", g.kinds, g.masked, g.count)
 	t.Logf("%d frames (%v by width), %d masked, %d payload bytes", g.count, g.kinds, g.masked, g.data)
 }
 
@@ -236,7 +243,7 @@ func bounded(t *testing.T, l *bytescan.Token) {
 		ok = n == 1
 	}
 	if !ok {
-		t.Fatalf("%s of %d bytes at %d", l.Type(), n, l.Offset())
+		require.FailNowf(t, "", "%s of %d bytes at %d", l.Type(), n, l.Offset())
 	}
 }
 
@@ -278,22 +285,16 @@ func corrupt(t *testing.T, garbage streamtest.GarbageFunc) map[bytescan.TokenTyp
 				}
 				return
 			}
-			if off == first.Offset && c.inner {
-				t.Fatalf("garbage at %d inside a frame", off)
-			}
+			require.Falsef(t, off == first.Offset && c.inner, "garbage at %d inside a frame", off)
 			if off != c.next {
-				t.Fatalf("%s at %d, want the next token at %d", l.Type(), off, c.next)
+				require.FailNowf(t, "", "%s at %d, want the next token at %d", l.Type(), off, c.next)
 			}
 			c.next = off + int64(l.Len())
 			bounded(t, l)
 			after[l.Type()]++
 		}))
-	if first == nil {
-		t.Fatal("no garbage injected")
-	}
-	if c.next != res.Bytes {
-		t.Errorf("tokens end at %d, want the end of the stream at %d", c.next, res.Bytes)
-	}
+	require.NotNil(t, first, "no garbage injected")
+	assert.Equalf(t, res.Bytes, c.next, "tokens end at %d, want the end of the stream at %d", c.next, res.Bytes)
 	t.Logf("%d frames before the first garbage run at %d; after it: %v", framed, first.Offset, after)
 	return after
 }
@@ -323,9 +324,7 @@ func maximal(rng *rand.Rand, dst []byte) []byte {
 // most maxPiece bytes, under the harness ceiling.
 func TestCorruptionMaximalLength(t *testing.T) {
 	after := corrupt(t, maximal)
-	if after[frameHeader] != 1 || after[extendedLength] != 1 || after[maskingKey] != 1 || after[bytescan.TokenTypeUnknown] != 0 {
-		t.Errorf("after the first garbage run: %v, want one frame whose payload runs to the end", after)
-	}
+	assert.Falsef(t, after[frameHeader] != 1 || after[extendedLength] != 1 || after[maskingKey] != 1 || after[bytescan.TokenTypeUnknown] != 0, "after the first garbage run: %v, want one frame whose payload runs to the end", after)
 }
 
 // TestHugeLength lexes a frame whose 64-bit length, 2^63-1, is larger than
@@ -348,16 +347,15 @@ func TestHugeLength(t *testing.T) {
 				return
 			}
 			if l.Type() != payload || off != body+got || l.Len() > maxPiece {
-				t.Fatalf("at %d: %s of %d bytes, want a PAYLOAD piece of at most %d bytes at %d", off, l.Type(), l.Len(), maxPiece, body+got)
+				require.FailNowf(t, "", "at %d: %s of %d bytes, want a PAYLOAD piece of at most %d bytes at %d", off, l.Type(), l.Len(), maxPiece, body+got)
 			}
 			got += int64(l.Len())
 		}))
-	if want := res.Bytes - body; got != want {
-		t.Errorf("lexed %d bytes of PAYLOAD, want the rest of the stream (%d)", got, want)
+	{
+		want := res.Bytes - body
+		assert.Equalf(t, want, got, "lexed %d bytes of PAYLOAD, want the rest of the stream (%d)", got, want)
 	}
-	if res.Counts[frameHeader] != 1 || res.Counts[extendedLength] != 1 {
-		t.Errorf("counts = %v, want one frame", res.Counts)
-	}
+	assert.Falsef(t, res.Counts[frameHeader] != 1 || res.Counts[extendedLength] != 1, "counts = %v, want one frame", res.Counts)
 }
 
 // TestReleaseBeforeRead checks rule 1 of the driver: the header scanner is
@@ -375,7 +373,5 @@ func TestReleaseBeforeRead(t *testing.T) {
 			n++
 		}
 	}
-	if n != g.count {
-		t.Fatalf("lexed %d frame headers, want %d", n, g.count)
-	}
+	require.Equalf(t, g.count, n, "lexed %d frame headers, want %d", n, g.count)
 }

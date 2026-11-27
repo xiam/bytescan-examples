@@ -5,6 +5,8 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"github.com/xiam/bytescan"
 )
 
@@ -28,17 +30,17 @@ func TestStates(t *testing.T) {
 			if _, err := d.Next(); err == io.EOF {
 				break
 			} else if err != nil {
-				t.Fatal(err)
+				require.NoError(t, err)
 			}
 			got = append(got, d.state)
 		}
 		if len(got) != len(c.want) {
-			t.Errorf("%q: states %v, want %v", c.in, got, c.want)
+			assert.Failf(t, "", "%q: states %v, want %v", c.in, got, c.want)
 			continue
 		}
 		for i := range got {
 			if got[i] != c.want[i] {
-				t.Errorf("%q: states %v, want %v", c.in, got, c.want)
+				assert.Failf(t, "", "%q: states %v, want %v", c.in, got, c.want)
 				break
 			}
 		}

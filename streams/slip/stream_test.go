@@ -4,6 +4,8 @@ import (
 	"math/rand"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"github.com/xiam/bytescan"
 	"github.com/xiam/bytescan/streamtest"
 )
@@ -69,7 +71,7 @@ func checkToken(t *testing.T, l *bytescan.Token) {
 		ok = l.Len() >= 1 && l.Len() <= maxRun
 	}
 	if !ok {
-		t.Fatalf("%s of %d bytes at %d", l.Type(), l.Len(), l.Offset())
+		require.FailNowf(t, "", "%s of %d bytes at %d", l.Type(), l.Len(), l.Offset())
 	}
 }
 
@@ -84,22 +86,19 @@ func TestLongRun(t *testing.T) {
 	res := streamtest.Run(t, newScanner, gen, streamtest.WithTokenFunc(func(l *bytescan.Token) {
 		checkToken(t, l)
 		if int64(l.Offset()) != pos {
-			t.Fatalf("%s at %d, want the next token at %d", l.Type(), l.Offset(), pos)
+			require.FailNowf(t, "", "%s at %d, want the next token at %d", l.Type(), l.Offset(), pos)
 		}
 		pos += int64(l.Len())
 	}))
-	if pos != res.Bytes {
-		t.Errorf("tokens end at %d, want the end of the stream at %d", pos, res.Bytes)
-	}
+	assert.Equalf(t, res.Bytes, pos, "tokens end at %d, want the end of the stream at %d", pos, res.Bytes)
 	got := counts{res.Counts[endType], res.Counts[escEndType], res.Counts[escEscType]}
-	if got != want {
-		t.Errorf("END, ESC_END, ESC_ESC tokens = %+v, want %+v", got, want)
-	}
-	if n := res.Counts[bytescan.TokenTypeUnknown]; n != 0 {
-		t.Errorf("UNKNOWN tokens = %d, want 0", n)
+	assert.Equalf(t, want, got, "END, ESC_END, ESC_ESC tokens = %+v, want %+v", got, want)
+	{
+		n := res.Counts[bytescan.TokenTypeUnknown]
+		assert.Zerof(t, n, "UNKNOWN tokens = %d, want 0", n)
 	}
 	if res.Counts[dataType] <= int64(gen.Records()) {
-		t.Errorf("DATA tokens = %d for %d frames, want long payloads in several pieces", res.Counts[dataType], gen.Records())
+		assert.Failf(t, "", "DATA tokens = %d for %d frames, want long payloads in several pieces", res.Counts[dataType], gen.Records())
 	}
 }
 
@@ -150,7 +149,7 @@ func TestCorruption(t *testing.T) {
 		checkToken(t, l)
 		off := int64(l.Offset())
 		if off != pos {
-			t.Fatalf("%s at %d, want the next token at %d", l.Type(), off, pos)
+			require.FailNowf(t, "", "%s at %d, want the next token at %d", l.Type(), off, pos)
 		}
 		pos += int64(l.Len())
 		drain()
@@ -160,18 +159,15 @@ func TestCorruption(t *testing.T) {
 		inGarbage := len(pending) > 0 && off >= pending[0].Offset
 		escInGarbage := inGarbage && (off-pending[0].Offset)%2 == 0
 		if (l.Type() == bytescan.TokenTypeUnknown) != escInGarbage {
-			t.Fatalf("%s at %d, garbage %+v: want UNKNOWN exactly at each ESC of a garbage run", l.Type(), off, pending)
+			require.FailNowf(t, "", "%s at %d, garbage %+v: want UNKNOWN exactly at each ESC of a garbage run", l.Type(), off, pending)
 		}
 	}))
-	if pos != res.Bytes {
-		t.Errorf("tokens end at %d, want the end of the stream at %d", pos, res.Bytes)
-	}
-	if n := res.Counts[bytescan.TokenTypeUnknown]; n != unknowns || n == 0 {
-		t.Errorf("UNKNOWN tokens = %d, want %d, more than 0", n, unknowns)
+	assert.Equalf(t, res.Bytes, pos, "tokens end at %d, want the end of the stream at %d", pos, res.Bytes)
+	{
+		n := res.Counts[bytescan.TokenTypeUnknown]
+		assert.Falsef(t, n != unknowns || n == 0, "UNKNOWN tokens = %d, want %d, more than 0", n, unknowns)
 	}
 	got := counts{res.Counts[endType], res.Counts[escEndType], res.Counts[escEscType]}
-	if got != want {
-		t.Errorf("END, ESC_END, ESC_ESC tokens = %+v, want %+v", got, want)
-	}
+	assert.Equalf(t, want, got, "END, ESC_END, ESC_ESC tokens = %+v, want %+v", got, want)
 	t.Logf("%d frames, %d garbage runs, %d UNKNOWN", gen.Records(), runs, unknowns)
 }

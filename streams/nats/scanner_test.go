@@ -5,15 +5,17 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"github.com/xiam/bytescan"
-	"github.com/xiam/bytescan-examples/internal/lexdump"
+	"github.com/xiam/bytescan-examples/internal/lextest"
 	"github.com/xiam/bytescan-examples/internal/streamkit"
 	"github.com/xiam/bytescan/bytesource"
 	"github.com/xiam/bytescan/streamtest"
 )
 
 func TestGolden(t *testing.T) {
-	lexdump.Golden(t, dumper, newScanner)
+	lextest.Golden(t, dumper, newScanner)
 }
 
 // types returns the types of ls, separated by blanks.
@@ -37,7 +39,7 @@ func TestPayloadPieces(t *testing.T) {
 	var gotBody, gotHdr [][]byte
 	for _, l := range ls {
 		if l.Len() > maxPiece {
-			t.Fatalf("%s at %d is %d bytes, want at most %d", l.Type(), l.Offset(), l.Len(), maxPiece)
+			require.FailNowf(t, "", "%s at %d is %d bytes, want at most %d", l.Type(), l.Offset(), l.Len(), maxPiece)
 		}
 		switch l.Type() {
 		case payload:
@@ -46,17 +48,19 @@ func TestPayloadPieces(t *testing.T) {
 			gotHdr = append(gotHdr, bytesource.Bytes(l.Text()))
 		}
 	}
-	if want := 3 + 1; len(gotBody) != want {
-		t.Fatalf("%d PAYLOAD tokens, want %d", len(gotBody), want)
+	{
+		want := 3 + 1
+		if len(gotBody) != want {
+			require.FailNowf(t, "", "%d PAYLOAD tokens, want %d", len(gotBody), want)
+		}
 	}
-	if !bytes.Equal(bytes.Join(gotBody[:3], nil), body) || string(gotBody[3]) != "body" {
-		t.Fatal("the PAYLOAD tokens do not hold the payload")
-	}
+	require.False(t, !bytes.Equal(bytes.Join(gotBody[:3], nil), body) || string(gotBody[3]) != "body", "the PAYLOAD tokens do not hold the payload")
 	if len(gotHdr) != 2 || !bytes.Equal(bytes.Join(gotHdr, nil), hdr) {
-		t.Fatalf("%d HEADERS tokens, want 2 that hold the headers", len(gotHdr))
+		require.FailNowf(t, "", "%d HEADERS tokens, want 2 that hold the headers", len(gotHdr))
 	}
-	if tail := types(ls[len(ls)-3:]); tail != "CRLF OP CRLF" {
-		t.Fatalf("tokens after the payload are %s, want CRLF OP CRLF", tail)
+	{
+		tail := types(ls[len(ls)-3:])
+		require.Equalf(t, "CRLF OP CRLF", tail, "tokens after the payload are %s, want CRLF OP CRLF", tail)
 	}
 }
 
@@ -71,8 +75,9 @@ func TestReleaseBeforeRead(t *testing.T) {
 		return newDriver(cur, bytescan.WithMaxTokenBytes(tokenGuard))
 	})
 	want := "OP SP SUBJECT SP SID SP SIZE CRLF PAYLOAD PAYLOAD CRLF OP CRLF"
-	if got := types(ls); got != want {
-		t.Fatalf("tokens = %s, want %s", got, want)
+	{
+		got := types(ls)
+		require.Equalf(t, want, got, "tokens = %s, want %s", got, want)
 	}
 }
 
@@ -83,11 +88,13 @@ func TestByteFraming(t *testing.T) {
 	body := "日本語 ✓"
 	ls := streamtest.LexAll(t, newScanner(strings.NewReader(msg("u", "1", "", body)+"PONG\r\n")))
 	want := "OP SP SUBJECT SP SID SP SIZE CRLF PAYLOAD CRLF OP CRLF"
-	if got := types(ls); got != want {
-		t.Fatalf("tokens = %s, want %s", got, want)
+	{
+		got := types(ls)
+		require.Equalf(t, want, got, "tokens = %s, want %s", got, want)
 	}
-	if got := string(bytesource.Bytes(ls[8].Text())); got != body {
-		t.Fatalf("PAYLOAD = %q, want %q", got, body)
+	{
+		got := string(bytesource.Bytes(ls[8].Text()))
+		require.Equalf(t, body, got, "PAYLOAD = %q, want %q", got, body)
 	}
 }
 
@@ -110,11 +117,13 @@ func TestLookaheadGuard(t *testing.T) {
 	for _, tt := range tests {
 		in := "SUB a " + strings.Repeat("\xff", tt.high) + strings.Repeat(" ", tt.blanks) + "1\r\nPING\r\n"
 		ls := streamtest.LexAll(t, newScanner(strings.NewReader(in)))
-		if got := ls[4].Type(); got != tt.first {
-			t.Errorf("%d high bytes, %d blanks: the field is %s, want %s", tt.high, tt.blanks, got, tt.first)
+		{
+			got := ls[4].Type()
+			assert.Equalf(t, tt.first, got, "%d high bytes, %d blanks: the field is %s, want %s", tt.high, tt.blanks, got, tt.first)
 		}
-		if tail := types(ls[len(ls)-3:]); tail != "CRLF OP CRLF" {
-			t.Errorf("%d high bytes, %d blanks: the stream ends with %s, want CRLF OP CRLF", tt.high, tt.blanks, tail)
+		{
+			tail := types(ls[len(ls)-3:])
+			assert.Equalf(t, "CRLF OP CRLF", tail, "%d high bytes, %d blanks: the stream ends with %s, want CRLF OP CRLF", tt.high, tt.blanks, tail)
 		}
 	}
 
@@ -124,8 +133,9 @@ func TestLookaheadGuard(t *testing.T) {
 	in := "HPUB a 0000000002" + blanks + "0000000003" + blanks + "\r\nabc\r\nPING\r\n"
 	ls := streamtest.LexAll(t, newScanner(strings.NewReader(in)))
 	want := "OP SP SUBJECT SP SIZE SP SIZE SP CRLF HEADERS PAYLOAD CRLF OP CRLF"
-	if got := types(ls); got != want {
-		t.Errorf("HPUB at the lookahead bounds: tokens = %s, want %s", got, want)
+	{
+		got := types(ls)
+		assert.Equalf(t, want, got, "HPUB at the lookahead bounds: tokens = %s, want %s", got, want)
 	}
 }
 
@@ -151,10 +161,11 @@ func TestHeaderSegments(t *testing.T) {
 			}
 		}
 		if hdr.String() != "ABCDEFGHIJK" || body.String() != "xyz" {
-			t.Errorf("%s: HEADERS %q and PAYLOAD %q, want %q and %q", op, hdr.String(), body.String(), "ABCDEFGHIJK", "xyz")
+			assert.Failf(t, "", "%s: HEADERS %q and PAYLOAD %q, want %q and %q", op, hdr.String(), body.String(), "ABCDEFGHIJK", "xyz")
 		}
-		if tail := types(ls[len(ls)-3:]); tail != "CRLF OP CRLF" {
-			t.Errorf("%s: the stream ends with %s, want CRLF OP CRLF", op, tail)
+		{
+			tail := types(ls[len(ls)-3:])
+			assert.Equalf(t, "CRLF OP CRLF", tail, "%s: the stream ends with %s, want CRLF OP CRLF", op, tail)
 		}
 	}
 }

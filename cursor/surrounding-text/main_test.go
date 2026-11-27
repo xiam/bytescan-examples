@@ -3,6 +3,9 @@ package main
 import (
 	"strings"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 // TestRun runs the program on fixed inputs and checks the whole output: the
@@ -22,11 +25,13 @@ Marker not found.
 	}
 	for _, tt := range tests {
 		var out strings.Builder
-		if err := run(&out, strings.NewReader(tt.in)); err != nil {
-			t.Fatalf("%s: run: %v", tt.name, err)
+		{
+			err := run(&out, strings.NewReader(tt.in))
+			require.NoErrorf(t, err, "%s: run: %v", tt.name, err)
 		}
-		if got := out.String(); got != tt.want {
-			t.Errorf("%s: output:\n%s\nwant:\n%s", tt.name, got, tt.want)
+		{
+			got := out.String()
+			assert.Equalf(t, tt.want, got, "%s: output:\n%s\nwant:\n%s", tt.name, got, tt.want)
 		}
 	}
 }
