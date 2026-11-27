@@ -9,14 +9,16 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"github.com/xiam/bytescan-examples/internal/hexdump"
-	"github.com/xiam/bytescan-examples/internal/lexdump"
+	"github.com/xiam/bytescan-examples/internal/lextest"
 	"github.com/xiam/bytescan/bytesource"
 	"github.com/xiam/bytescan/streamtest"
 )
 
 func TestGolden(t *testing.T) {
-	lexdump.Golden(t, hexdump.Dumper, newScanner)
+	lextest.Golden(t, hexdump.Dumper, newScanner)
 }
 
 // TestNames checks the document archive against archive/zip: the FILE_NAME
@@ -25,31 +27,26 @@ func TestGolden(t *testing.T) {
 func TestNames(t *testing.T) {
 	path := filepath.Join("testdata", "document.input")
 	zr, err := zip.OpenReader(path)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	defer zr.Close()
 	var want []string
 	for _, f := range zr.File {
 		want = append(want, f.Name)
 		rc, err := f.Open()
-		if err != nil {
-			t.Fatal(err)
-		}
-		if _, err := io.Copy(io.Discard, rc); err != nil {
-			t.Fatalf("%s: %v", f.Name, err)
+		require.NoError(t, err)
+		{
+			_, err := io.Copy(io.Discard, rc)
+			require.NoErrorf(t, err, "%s: %v", f.Name, err)
 		}
 		rc.Close()
 	}
 	if len(want) != 2 {
-		t.Fatalf("archive/zip reports %d files, want 2", len(want))
+		require.FailNowf(t, "", "archive/zip reports %d files, want 2", len(want))
 	}
 	want = append(want, want...)
 
 	f, err := os.Open(path)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	defer f.Close()
 	var got []string
 	d := newScanner(f)
@@ -58,20 +55,14 @@ func TestNames(t *testing.T) {
 		if err == io.EOF {
 			break
 		}
-		if err != nil {
-			t.Fatal(err)
-		}
+		require.NoError(t, err)
 		if l.Type() == fileName {
 			got = append(got, string(bytesource.Bytes(l.Text())))
 		}
 	}
-	if len(got) != len(want) {
-		t.Fatalf("FILE_NAME tokens = %q, want %q", got, want)
-	}
+	require.Equalf(t, len(want), len(got), "FILE_NAME tokens = %q, want %q", got, want)
 	for i := range got {
-		if got[i] != want[i] {
-			t.Errorf("FILE_NAME %d = %q, want %q", i, got[i], want[i])
-		}
+		assert.Equalf(t, want[i], got[i], "FILE_NAME %d = %q, want %q", i, got[i], want[i])
 	}
 }
 
@@ -87,8 +78,9 @@ func TestReleaseBeforeData(t *testing.T) {
 		got = append(got, string(l.Type()))
 	}
 	want := "LOCAL_FILE_HEADER FILE_NAME FILE_DATA CENTRAL_DIRECTORY_HEADER FILE_NAME END_OF_CENTRAL_DIRECTORY"
-	if g := strings.Join(got, " "); g != want {
-		t.Errorf("tokens = %s, want %s", g, want)
+	{
+		g := strings.Join(got, " ")
+		assert.Equalf(t, want, g, "tokens = %s, want %s", g, want)
 	}
 }
 
@@ -103,12 +95,12 @@ func TestFileDataPieces(t *testing.T) {
 			continue
 		}
 		if l.Len() > maxPiece {
-			t.Errorf("piece %d has %d bytes, more than %d", pieces, l.Len(), maxPiece)
+			assert.Failf(t, "", "piece %d has %d bytes, more than %d", pieces, l.Len(), maxPiece)
 		}
 		pieces++
 		sum += l.Len()
 	}
 	if sum != len(data) || pieces != 3 {
-		t.Errorf("%d FILE_DATA pieces of %d bytes, want 3 of %d", pieces, sum, len(data))
+		assert.Failf(t, "", "%d FILE_DATA pieces of %d bytes, want 3 of %d", pieces, sum, len(data))
 	}
 }

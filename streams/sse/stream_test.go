@@ -8,6 +8,8 @@ import (
 	"testing"
 	"unicode/utf8"
 
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"github.com/xiam/bytescan"
 	"github.com/xiam/bytescan/streamtest"
 )
@@ -104,13 +106,12 @@ func ceiling(cursors int) streamtest.Option {
 // token.
 func TestLongRun(t *testing.T) {
 	res := streamtest.Run(t, newScanner, streamtest.NewGenerator(1, eventRecord), ceiling(1))
-	if n := res.Counts[bytescan.TokenType("UNKNOWN")]; n != 0 {
-		t.Errorf("%d UNKNOWN tokens, want none", n)
+	{
+		n := res.Counts[bytescan.TokenType("UNKNOWN")]
+		assert.Zerof(t, n, "%d UNKNOWN tokens, want none", n)
 	}
 	for _, typ := range []bytescan.TokenType{event, data, id, retry, field, colon, space, value, comment, eol, eventEnd} {
-		if res.Counts[typ] == 0 {
-			t.Errorf("no %s token in the stream", typ)
-		}
+		assert.NotZerof(t, res.Counts[typ], "no %s token in the stream", typ)
 	}
 }
 
@@ -142,9 +143,7 @@ func TestCorruption(t *testing.T) {
 	)
 	cleanNext := func() *bytescan.Token {
 		l, err := clean.Next()
-		if err != nil {
-			t.Fatalf("clean stream: %v", err)
-		}
+		require.NoErrorf(t, err, "clean stream: %v", err)
 		return l
 	}
 	isLineEnd := func(l *bytescan.Token) bool {
@@ -157,7 +156,7 @@ func TestCorruption(t *testing.T) {
 			return
 		}
 		if l.Type() == "UNKNOWN" {
-			t.Errorf("UNKNOWN token %q at byte %d", l.Text(), l.ByteOffset())
+			assert.Failf(t, "", "UNKNOWN token %q at byte %d", l.Text(), l.ByteOffset())
 			return
 		}
 		if !haveInj {
@@ -165,15 +164,13 @@ func TestCorruption(t *testing.T) {
 		}
 		off := int64(l.ByteOffset())
 		if haveInj && off >= inj.Offset {
-			if skipping {
-				t.Fatalf("garbage run %d at byte %d starts before the joined line of the run before it ends", seen+1, inj.Offset)
-			}
+			require.Falsef(t, skipping, "garbage run %d at byte %d starts before the joined line of the run before it ends", seen+1, inj.Offset)
 			// The clean stream skips the first line of the record.
 			target := inj.Offset - shift
 			for {
 				cl := cleanNext()
 				if int64(cl.ByteOffset()) < target {
-					t.Fatalf("clean token %s %q at byte %d is before the record at byte %d", cl.Type(), cl.Text(), cl.ByteOffset(), target)
+					require.FailNowf(t, "", "clean token %s %q at byte %d is before the record at byte %d", cl.Type(), cl.Text(), cl.ByteOffset(), target)
 				}
 				if isLineEnd(cl) {
 					break
@@ -193,17 +190,18 @@ func TestCorruption(t *testing.T) {
 		}
 		cl := cleanNext()
 		if cl.Type() != l.Type() || cl.Text() != l.Text() || int64(cl.ByteOffset())+shift != off {
-			t.Fatalf("after %d garbage runs: got %s %q at byte %d, want %s %q at byte %d",
+			require.FailNowf(t, "", "after %d garbage runs: got %s %q at byte %d, want %s %q at byte %d",
 				seen, l.Type(), l.Text(), off, cl.Type(), cl.Text(), int64(cl.ByteOffset())+shift)
 		}
 		compared++
 	}))
 
-	if _, err := clean.Next(); err != io.EOF {
-		t.Errorf("the clean stream has more tokens than the corrupted one (err %v)", err)
+	{
+		_, err := clean.Next()
+		assert.Truef(t, err == io.EOF, "the clean stream has more tokens than the corrupted one (err %v)", err)
 	}
 	if seen == 0 || seen != c.Injected() {
-		t.Errorf("reached %d garbage runs, %d injected", seen, c.Injected())
+		assert.Failf(t, "", "reached %d garbage runs, %d injected", seen, c.Injected())
 	}
 	t.Logf("%d garbage runs: %d tokens in the joined lines, %d of %d tokens equal to the clean stream", seen, corrupted, compared, res.Tokens)
 }
@@ -249,17 +247,16 @@ func TestUndelimited(t *testing.T) {
 					return
 				}
 				if l.Type() != c.typ {
-					t.Fatalf("token %d is %s %.20q, want %s", n, l.Type(), l.Text(), c.typ)
+					require.FailNowf(t, "", "token %d is %s %.20q, want %s", n, l.Type(), l.Text(), c.typ)
 				}
-				if r := utf8.RuneCountInString(l.Text()); r > maxRun {
-					t.Fatalf("token %d has %d runes, more than %d", n, r, maxRun)
+				{
+					r := utf8.RuneCountInString(l.Text())
+					require.LessOrEqualf(t, r, maxRun, "token %d has %d runes, more than %d", n, r, maxRun)
 				}
 				pieces++
 				runLen += int64(len(l.Text()))
 			}))
-			if runLen < 16<<10 {
-				t.Fatalf("the run is %d bytes, want at least 16 KiB", runLen)
-			}
+			require.GreaterOrEqualf(t, runLen, int64(16<<10), "the run is %d bytes, want at least 16 KiB", runLen)
 			t.Logf("a %d-byte %s run in %d pieces", runLen, c.typ, pieces)
 		})
 	}

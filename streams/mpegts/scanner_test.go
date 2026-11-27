@@ -7,15 +7,16 @@ import (
 	"testing"
 	"testing/iotest"
 
+	"github.com/stretchr/testify/require"
 	"github.com/xiam/bytescan"
 	"github.com/xiam/bytescan-examples/internal/guardtest"
 	"github.com/xiam/bytescan-examples/internal/hexdump"
-	"github.com/xiam/bytescan-examples/internal/lexdump"
+	"github.com/xiam/bytescan-examples/internal/lextest"
 	"github.com/xiam/bytescan/streamtest"
 )
 
 func TestGolden(t *testing.T) {
-	lexdump.Golden(t, hexdump.Dumper, newScanner)
+	lextest.Golden(t, hexdump.Dumper, newScanner)
 }
 
 // TestGuard checks the production guard: it is streamtest.ByteGuard;
@@ -23,9 +24,7 @@ func TestGolden(t *testing.T) {
 // UNKNOWN tokens of one byte, with no guard error and bounded memory; and a
 // candidate longer than the guard fails Next with the guard error.
 func TestGuard(t *testing.T) {
-	if tokenGuard != streamtest.ByteGuard {
-		t.Fatalf("tokenGuard = %d, want streamtest.ByteGuard (%d)", tokenGuard, streamtest.ByteGuard)
-	}
+	require.Equalf(t, streamtest.ByteGuard, tokenGuard, "tokenGuard = %d, want streamtest.ByteGuard (%d)", tokenGuard, streamtest.ByteGuard)
 	guardtest.Bounded(t, newScanner, streamtest.NewGenerator(80, guardtest.Filler(syncByte)), 1, bytescan.TokenTypeUnknown)
 
 	// tokenGuard+1 bytes of 0xFF exceed the guard, which counts bytes, by one.
@@ -45,15 +44,11 @@ func TestReadError(t *testing.T) {
 		l, err := d.Next()
 		if err != nil {
 			if l != nil {
-				t.Fatalf("Next returned %s and the error %v", l.Type(), err)
+				require.FailNowf(t, "", "Next returned %s and the error %v", l.Type(), err)
 			}
-			if !errors.Is(err, errRead) {
-				t.Fatalf("Next: %v, want the reader's error", err)
-			}
+			require.ErrorIsf(t, err, errRead, "Next: %v, want the reader's error", err)
 			return
 		}
-		if l == nil {
-			t.Fatal("Next returned no token and no error")
-		}
+		require.NotNil(t, l, "Next returned no token and no error")
 	}
 }

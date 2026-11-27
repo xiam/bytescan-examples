@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"testing"
 
-	"github.com/xiam/bytescan-examples/internal/lexdump"
+	"github.com/xiam/bytescan-examples/internal/lextest"
 )
 
 // The binary test inputs are built here, so the testdata/*.input files are
@@ -24,7 +24,7 @@ var inputs = map[string]func() []byte{
 }
 
 func TestInputs(t *testing.T) {
-	lexdump.Inputs(t, inputs)
+	lextest.Inputs(t, inputs)
 }
 
 // The values of adaptation_field_control (ISO/IEC 13818-1, table 2-5).
@@ -93,10 +93,10 @@ func packets() []byte {
 	var b []byte
 	pat := []byte{0x00, 0x00, 0xB0, 0x0D, 0x00, 0x01, 0xC1, 0x00, 0x00, 0x00, 0x01, 0xE1, 0x00, 0x2A, 0x5D, 0x3C, 0x91}
 	b = append(b, packet(pidPAT, true, payloadOnly, 0, pat)...)
-	b = append(b, packet(pidVideo, true, both, 0, pcr, pesStart, []byte("GGG 0x47 in a payload"), lexdump.Sequence(0x40, 120))...)
+	b = append(b, packet(pidVideo, true, both, 0, pcr, pesStart, []byte("GGG 0x47 in a payload"), lextest.Sequence(0x40, 120))...)
 	b = append(b, packet(pidVideo, false, adaptationOnly, 1, adaptation(183, 0x00))...)
 	b = append(b, packet(pidNull, false, payloadOnly, 0)...)
-	b = append(b, packet(pidAudio, false, both, 5, adaptation(0), lexdump.Sequence(0x47, 183))...)
+	b = append(b, packet(pidAudio, false, both, 5, adaptation(0), lextest.Sequence(0x47, 183))...)
 	return b
 }
 
@@ -130,12 +130,12 @@ func truncatedHeader() []byte {
 func resync() []byte {
 	b := []byte{0x00, 0x13, syncByte, 0x37}
 	b = append(b, packet(pidVideo, true, payloadOnly, 0, pesStart)...)
-	b = append(b, packet(pidVideo, false, payloadOnly, 1, lexdump.Sequence(0x00, 184))...)
-	bad := packet(pidVideo, false, payloadOnly, 2, []byte("GG"), lexdump.Sequence(0x00, 182))
+	b = append(b, packet(pidVideo, false, payloadOnly, 1, lextest.Sequence(0x00, 184))...)
+	bad := packet(pidVideo, false, payloadOnly, 2, []byte("GG"), lextest.Sequence(0x00, 182))
 	bad[0] = 0x48
 	b = append(b, bad...)
-	b = append(b, packet(pidAudio, false, payloadOnly, 0, lexdump.Sequence(0x10, 184))...)
-	b = append(b, packet(pidAudio, false, payloadOnly, 1, lexdump.Sequence(0x20, 184))...)
+	b = append(b, packet(pidAudio, false, payloadOnly, 0, lextest.Sequence(0x10, 184))...)
+	b = append(b, packet(pidAudio, false, payloadOnly, 1, lextest.Sequence(0x20, 184))...)
 	return b
 }
 

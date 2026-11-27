@@ -5,14 +5,16 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"github.com/xiam/bytescan-examples/internal/hexdump"
-	"github.com/xiam/bytescan-examples/internal/lexdump"
+	"github.com/xiam/bytescan-examples/internal/lextest"
 	"github.com/xiam/bytescan/bytesource"
 	"github.com/xiam/bytescan/streamtest"
 )
 
 func TestGolden(t *testing.T) {
-	lexdump.Golden(t, hexdump.Dumper, newScanner)
+	lextest.Golden(t, hexdump.Dumper, newScanner)
 }
 
 // TestFrames checks the samples of the subset: each FRAME_HEADER is followed
@@ -28,27 +30,25 @@ func TestFrames(t *testing.T) {
 			sum := 0
 			for i, l := range ls {
 				if l.Offset() != sum {
-					t.Errorf("token %d (%s) at offset %d, want %d", i, l.Type(), l.Offset(), sum)
+					assert.Failf(t, "", "token %d (%s) at offset %d, want %d", i, l.Type(), l.Offset(), sum)
 				}
 				sum += l.Len()
 				if l.Type() != frameHeader {
 					continue
 				}
 				if i+1 == len(ls) || ls[i+1].Type() != frameBody {
-					t.Fatalf("FRAME_HEADER at %d has no FRAME_BODY", l.Offset())
+					require.FailNowf(t, "", "FRAME_HEADER at %d has no FRAME_BODY", l.Offset())
 				}
 				frames = append(frames, l.Len()+ls[i+1].Len())
 			}
 			if sum != len(s.b) {
-				t.Errorf("token lengths sum to %d, the file has %d bytes", sum, len(s.b))
+				assert.Failf(t, "", "token lengths sum to %d, the file has %d bytes", sum, len(s.b))
 			}
 			if len(frames) != len(s.frames) {
-				t.Fatalf("%d frames, the helper wrote %d", len(frames), len(s.frames))
+				require.FailNowf(t, "", "%d frames, the helper wrote %d", len(frames), len(s.frames))
 			}
 			for i := range frames {
-				if frames[i] != s.frames[i] {
-					t.Errorf("frame %d is %d bytes, the helper wrote %d", i, frames[i], s.frames[i])
-				}
+				assert.Equalf(t, s.frames[i], frames[i], "frame %d is %d bytes, the helper wrote %d", i, frames[i], s.frames[i])
 			}
 		})
 	}
@@ -63,15 +63,13 @@ func TestTagSkipped(t *testing.T) {
 	found := false
 	for _, l := range streamtest.LexAll(t, newScanner(bytes.NewReader(s.b))) {
 		if l.Type() == frameHeader && l.Offset() < tagEnd {
-			t.Errorf("FRAME_HEADER at %d, inside the tag that ends at %d", l.Offset(), tagEnd)
+			assert.Failf(t, "", "FRAME_HEADER at %d, inside the tag that ends at %d", l.Offset(), tagEnd)
 		}
 		if l.Type() == id3FrameBody && bytes.Contains(bytesource.Bytes(l.Text()), mpeg1At32k[:]) {
 			found = true
 		}
 	}
-	if !found {
-		t.Error("no ID3_FRAME_BODY holds FF FB 14 C4")
-	}
+	assert.True(t, found, "no ID3_FRAME_BODY holds FF FB 14 C4")
 }
 
 // TestReleaseBeforeBody checks rule 1 of the driver: the active scanner is
@@ -89,8 +87,9 @@ func TestReleaseBeforeBody(t *testing.T) {
 		got = append(got, string(l.Type()))
 	}
 	want := "ID3_HEADER ID3_FRAME_HEADER ID3_FRAME_BODY" + strings.Repeat(" FRAME_HEADER FRAME_BODY", 4)
-	if g := strings.Join(got, " "); g != want {
-		t.Errorf("tokens = %s, want %s", g, want)
+	{
+		g := strings.Join(got, " ")
+		assert.Equalf(t, want, g, "tokens = %s, want %s", g, want)
 	}
 }
 
@@ -107,8 +106,9 @@ func TestFrameLength(t *testing.T) {
 		{[4]byte{0xFF, 0xFB, 0x90, 0x64}, 417}, // 128 kbit/s, 44 100 Hz: 417.96
 		{[4]byte{0xFF, 0xFA, 0x92, 0x64}, 418}, // with CRC and padding
 	} {
-		if got := frameLength(tc.h[:]); got != tc.want {
-			t.Errorf("frameLength(% x) = %d, want %d", tc.h, got, tc.want)
+		{
+			got := frameLength(tc.h[:])
+			assert.Equalf(t, tc.want, got, "frameLength(% x) = %d, want %d", tc.h, got, tc.want)
 		}
 	}
 }

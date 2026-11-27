@@ -9,6 +9,8 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"github.com/xiam/bytescan"
 	"github.com/xiam/bytescan-examples/streams/sse/ssedriver"
 	"github.com/xiam/bytescan/streamtest"
@@ -72,9 +74,7 @@ func ceiling(budget int64) int64 {
 func TestPipeBytes(t *testing.T) {
 	t.Parallel()
 	raw, err := io.ReadAll(streamtest.NewGenerator(1, eventRecord, streamtest.WithBudget(queueBudget())))
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	stream := string(raw)
 	want := dataBuffer(stream)
 
@@ -100,21 +100,15 @@ func TestPipeBytes(t *testing.T) {
 			if err == io.EOF {
 				break
 			}
-			if err != nil {
-				t.Fatalf("buffer of %d bytes: %v", size, err)
-			}
-			if n == 0 {
-				t.Fatalf("buffer of %d bytes: Read returned 0 bytes and no error", size)
-			}
+			require.NoErrorf(t, err, "buffer of %d bytes: %v", size, err)
+			require.NotZerof(t, n, "buffer of %d bytes: Read returned 0 bytes and no error", size)
 		}
 
 		// Cut the keep-alives out, from the last one back.
 		out := got.Bytes()
 		for i := len(keeps) - 1; i >= 0; i-- {
 			off := keeps[i]
-			if off+int64(len(keepAlive)) > int64(len(out)) || !bytes.Equal(out[off:off+int64(len(keepAlive))], keepAlive[:]) {
-				t.Fatalf("buffer of %d bytes: no keep-alive at byte %d", size, off)
-			}
+			require.Falsef(t, off+int64(len(keepAlive)) > int64(len(out)) || !bytes.Equal(out[off:off+int64(len(keepAlive))], keepAlive[:]), "buffer of %d bytes: no keep-alive at byte %d", size, off)
 			out = append(out[:off], out[off+int64(len(keepAlive)):]...)
 		}
 		if string(out) != want {
@@ -122,7 +116,7 @@ func TestPipeBytes(t *testing.T) {
 			for i < len(out) && i < len(want) && out[i] == want[i] {
 				i++
 			}
-			t.Fatalf("buffer of %d bytes: the pipe's bytes differ from the data buffer at byte %d of %d (got %q, want %q)",
+			require.FailNowf(t, "", "buffer of %d bytes: the pipe's bytes differ from the data buffer at byte %d of %d (got %q, want %q)",
 				size, i, len(want), clip(string(out[i:]), 40), clip(want[i:], 40))
 		}
 		t.Logf("buffer of %d bytes: %d data bytes, %d keep-alives", size, len(want), len(keeps))
@@ -234,7 +228,7 @@ func worstCase(eol string) string {
 func jsonLengthCheck(t *testing.T) func(*bytescan.Token) {
 	return func(l *bytescan.Token) {
 		if isJSON(l.Type()) && l.Len() > maxRun {
-			t.Fatalf("%s token of %d runes, more than %d", l.Type(), l.Len(), maxRun)
+			require.FailNowf(t, "", "%s token of %d runes, more than %d", l.Type(), l.Len(), maxRun)
 		}
 	}
 }
@@ -259,9 +253,7 @@ func TestQueue(t *testing.T) {
 			streamtest.Run(t, newL, gen, streamtest.WithCeiling(ceiling(queueBudget())), streamtest.WithTokenFunc(jsonLengthCheck(t)))
 			p := d.pipe
 			t.Logf("max queue %d tokens, %d runes; %d keep-alives", p.maxTokens, p.maxRunes, p.keepAlives)
-			if p.maxTokens > worstTokens || p.maxRunes > worstRunes {
-				t.Errorf("queue of %d tokens or %d runes, above the worst case of %d tokens or %d runes", p.maxTokens, p.maxRunes, worstTokens, worstRunes)
-			}
+			assert.Falsef(t, p.maxTokens > worstTokens || p.maxRunes > worstRunes, "queue of %d tokens or %d runes, above the worst case of %d tokens or %d runes", p.maxTokens, p.maxRunes, worstTokens, worstRunes)
 			maxLex, maxRunes = max(maxLex, p.maxTokens), max(maxRunes, p.maxRunes)
 		})
 	}
@@ -282,9 +274,7 @@ func TestWorstCase(t *testing.T) {
 	} {
 		lex, runes := lexQueue(t, strings.Repeat(worstCase(c.eol), 2))
 		t.Logf("%s: max queue %d tokens, %d runes", c.name, lex, runes)
-		if lex != worstTokens || runes != c.runes {
-			t.Errorf("%s: queue of %d tokens and %d runes, want %d tokens and %d runes", c.name, lex, runes, worstTokens, c.runes)
-		}
+		assert.Falsef(t, lex != worstTokens || runes != c.runes, "%s: queue of %d tokens and %d runes, want %d tokens and %d runes", c.name, lex, runes, worstTokens, c.runes)
 	}
 }
 
@@ -297,11 +287,9 @@ func lexQueue(t testing.TB, s string) (int, int) {
 		if err == io.EOF {
 			break
 		}
-		if err != nil {
-			t.Fatal(err)
-		}
+		require.NoError(t, err)
 		if isJSON(l.Type()) && l.Len() > maxRun {
-			t.Fatalf("%s token of %d runes, more than %d", l.Type(), l.Len(), maxRun)
+			require.FailNowf(t, "", "%s token of %d runes, more than %d", l.Type(), l.Len(), maxRun)
 		}
 	}
 	return d.pipe.maxTokens, d.pipe.maxRunes
@@ -376,9 +364,7 @@ func TestQueueSearch(t *testing.T) {
 				s := searchStream(rng)
 				total += len(s)
 				lex, runes := lexQueue(t, s)
-				if lex > worstTokens || runes > worstRunes {
-					t.Fatalf("stream %d: queue of %d tokens or %d runes, above the worst case of %d tokens or %d runes", i, lex, runes, worstTokens, worstRunes)
-				}
+				require.Falsef(t, lex > worstTokens || runes > worstRunes, "stream %d: queue of %d tokens or %d runes, above the worst case of %d tokens or %d runes", i, lex, runes, worstTokens, worstRunes)
 				maxLex, maxRunes = max(maxLex, lex), max(maxRunes, runes)
 			}
 			t.Logf("%d streams, %d bytes: max queue %d tokens, %d runes", searchStreams()/parts, total, maxLex, maxRunes)
@@ -407,9 +393,7 @@ func TestQueueHeap(t *testing.T) {
 		if err == io.EOF {
 			break
 		}
-		if err != nil {
-			t.Fatal(err)
-		}
+		require.NoError(t, err)
 		q = append(q, l)
 		runes += l.Len()
 	}
@@ -421,12 +405,8 @@ func TestQueueHeap(t *testing.T) {
 	q = nil
 	without := heap()
 	runtime.KeepAlive(sse)
-	if n != worstTokens || runes != worstRunes {
-		t.Fatalf("queue of %d tokens, %d runes; want %d and %d", n, runes, worstTokens, worstRunes)
-	}
+	require.Falsef(t, n != worstTokens || runes != worstRunes, "queue of %d tokens, %d runes; want %d and %d", n, runes, worstTokens, worstRunes)
 	held := int64(with) - int64(without)
 	t.Logf("a queue of %d tokens and %d runes holds %d bytes of live heap (bound %d)", n, runes, held, queueHeap)
-	if held > queueHeap {
-		t.Errorf("the worst-case queue holds %d bytes, above queueHeap (%d)", held, queueHeap)
-	}
+	assert.LessOrEqualf(t, held, int64(queueHeap), "the worst-case queue holds %d bytes, above queueHeap (%d)", held, queueHeap)
 }

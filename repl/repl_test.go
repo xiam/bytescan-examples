@@ -13,8 +13,10 @@ import (
 	"time"
 	"unicode/utf8"
 
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"github.com/xiam/bytescan-examples/highlight/paint"
-	"github.com/xiam/bytescan-examples/internal/lexdump"
+	"github.com/xiam/bytescan-examples/internal/lextest"
 	"github.com/xiam/bytescan/statelex"
 )
 
@@ -41,7 +43,7 @@ var inputs = map[string][]byte{
 }
 
 func TestInputs(t *testing.T) {
-	lexdump.Inputs(t, inputs)
+	lextest.Inputs(t, inputs)
 }
 
 // TestGolden runs the keys of every case and compares the plain output with
@@ -50,14 +52,10 @@ func TestGolden(t *testing.T) {
 	for name := range inputs {
 		t.Run(name, func(t *testing.T) {
 			keys, err := os.ReadFile(filepath.Join("testdata", name+".input"))
-			if err != nil {
-				t.Fatal(err)
-			}
+			require.NoError(t, err)
 			var got bytes.Buffer
-			if err := run(&got, bytes.NewReader(keys), false); err != nil {
-				t.Fatal(err)
-			}
-			lexdump.Compare(t, filepath.Join("testdata", name+".golden"), got.Bytes())
+			require.NoError(t, run(&got, bytes.NewReader(keys), false))
+			lextest.Compare(t, filepath.Join("testdata", name+".golden"), got.Bytes())
 		})
 	}
 }
@@ -66,10 +64,8 @@ func TestGolden(t *testing.T) {
 // testdata/string.color.golden.
 func TestColor(t *testing.T) {
 	var got bytes.Buffer
-	if err := run(&got, bytes.NewReader(inputs["string"]), true); err != nil {
-		t.Fatal(err)
-	}
-	lexdump.Compare(t, filepath.Join("testdata", "string.color.golden"), got.Bytes())
+	require.NoError(t, run(&got, bytes.NewReader(inputs["string"]), true))
+	lextest.Compare(t, filepath.Join("testdata", "string.color.golden"), got.Bytes())
 }
 
 // press types keys into r, one rune at a time, and returns the change of
@@ -81,9 +77,7 @@ func press(t *testing.T, r *repl, keys string) []statelex.Change {
 		k, size := utf8.DecodeRuneInString(keys)
 		keys = keys[size:]
 		ch, edited, err := r.press(k, size)
-		if err != nil {
-			t.Fatal(err)
-		}
+		require.NoError(t, err)
 		if edited {
 			changes = append(changes, ch)
 		}
@@ -95,26 +89,21 @@ func press(t *testing.T, r *repl, keys string) []statelex.Change {
 // change holds every token of the entry.
 func TestTenBackspaces(t *testing.T) {
 	r, err := newREPL(io.Discard, false)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	press(t, r, "x = 12 + total * alpha")
 	for i := 1; i <= 10; i++ {
 		before := r.lx.Tokens(0, r.lx.Len())
 		changes := press(t, r, bs)
 		if len(changes) != 1 {
-			t.Fatalf("backspace %d: %d changes, want 1", i, len(changes))
+			require.FailNowf(t, "", "backspace %d: %d changes, want 1", i, len(changes))
 		}
 		ch, after := changes[0], r.lx.Tokens(0, r.lx.Len())
-		if len(ch.Removed) == 0 && len(ch.Inserted) == 0 {
-			t.Errorf("backspace %d: empty change", i)
-		}
-		if len(ch.Removed) == len(before) || len(ch.Inserted) == len(after) {
-			t.Errorf("backspace %d: the change holds every token of the entry: removed %v, inserted %v", i, ch.Removed, ch.Inserted)
-		}
+		assert.Falsef(t, len(ch.Removed) == 0 && len(ch.Inserted) == 0, "backspace %d: empty change", i)
+		assert.Falsef(t, len(ch.Removed) == len(before) || len(ch.Inserted) == len(after), "backspace %d: the change holds every token of the entry: removed %v, inserted %v", i, ch.Removed, ch.Inserted)
 	}
-	if got := string(r.lx.Text(0, r.lx.Len())); got != "x = 12 + tot" {
-		t.Fatalf("entry %q, want %q", got, "x = 12 + tot")
+	{
+		got := string(r.lx.Text(0, r.lx.Len()))
+		require.Equalf(t, "x = 12 + tot", got, "entry %q, want %q", got, "x = 12 + tot")
 	}
 }
 
@@ -124,25 +113,27 @@ func TestTenBackspaces(t *testing.T) {
 func TestQuote(t *testing.T) {
 	var out bytes.Buffer
 	r, err := newREPL(&out, false)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	press(t, r, `say "`)
-	if toks := r.lx.Tokens(0, r.lx.Len()); len(toks) != 3 {
-		t.Fatalf("tokens %v, want 3", toks)
+	{
+		toks := r.lx.Tokens(0, r.lx.Len())
+		require.Equalf(t, 3, len(toks), "tokens %v, want 3", toks)
 	}
-	if _, ok := r.lx.Unfinished(); ok {
-		t.Fatal("a token is unfinished")
+	{
+		_, ok := r.lx.Unfinished()
+		require.False(t, ok, "a token is unfinished")
 	}
-	if r.lx.ModeAtEnd().Equal(r.start) {
-		t.Fatal("the mode state at the end is the start state")
-	}
+	require.False(t, r.lx.ModeAtEnd().Equal(r.start), "the mode state at the end is the start state")
 	press(t, r, "\n")
-	if _, ok := r.lx.Unfinished(); ok {
-		t.Fatal("after Enter, a token is unfinished")
+	{
+		_, ok := r.lx.Unfinished()
+		require.False(t, ok, "after Enter, a token is unfinished")
 	}
-	if want := "continue: the text ends in the mode str\n...\n"; !strings.HasSuffix(out.String(), want) {
-		t.Fatalf("output ends with\n%s\nwant\n%s", lastLines(out.String(), 2), want)
+	{
+		want := "continue: the text ends in the mode str\n...\n"
+		if !strings.HasSuffix(out.String(), want) {
+			require.FailNowf(t, "", "output ends with\n%s\nwant\n%s", lastLines(out.String(), 2), want)
+		}
 	}
 }
 
@@ -151,15 +142,14 @@ func TestQuote(t *testing.T) {
 func TestComment(t *testing.T) {
 	var out bytes.Buffer
 	r, err := newREPL(&out, false)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	press(t, r, "a /* note\n")
-	if !r.lx.ModeAtEnd().Equal(r.start) {
-		t.Fatal("the mode state at the end is not the start state")
-	}
-	if want := "continue: the token at 1:2 needs more input\n...\n"; !strings.HasSuffix(out.String(), want) {
-		t.Fatalf("output ends with\n%s\nwant\n%s", lastLines(out.String(), 2), want)
+	require.True(t, r.lx.ModeAtEnd().Equal(r.start), "the mode state at the end is not the start state")
+	{
+		want := "continue: the token at 1:2 needs more input\n...\n"
+		if !strings.HasSuffix(out.String(), want) {
+			require.FailNowf(t, "", "output ends with\n%s\nwant\n%s", lastLines(out.String(), 2), want)
+		}
 	}
 }
 
@@ -177,14 +167,13 @@ func TestRepaint(t *testing.T) {
 	for name, keys := range inputs {
 		t.Run(name, func(t *testing.T) {
 			r, err := newREPL(io.Discard, false)
-			if err != nil {
-				t.Fatal(err)
-			}
+			require.NoError(t, err)
 			for i, k := range string(keys) {
 				press(t, r, string(k))
 				full := paintFromStart(t, r.lx.Text(0, r.lx.Len()))
-				if got, want := fmt.Sprint(r.h.Tokens()), fmt.Sprint(full); got != want {
-					t.Fatalf("key %d %q: repaint\n%s\nfull paint\n%s", i, k, got, want)
+				{
+					got, want := fmt.Sprint(r.h.Tokens()), fmt.Sprint(full)
+					require.Equalf(t, want, got, "key %d %q: repaint\n%s\nfull paint\n%s", i, k, got, want)
 				}
 			}
 		})
@@ -198,15 +187,14 @@ func TestRepaintGenerated(t *testing.T) {
 	keys := []rune{'"', '/', '*', '=', '.', '1', 'x', 'é', ' ', '@', '\n', 0x7F, 0x7F, 0x08}
 	rng := rand.New(rand.NewSource(135))
 	r, err := newREPL(io.Discard, false)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	for i := 0; i < 300; i++ {
 		k := keys[rng.Intn(len(keys))]
 		press(t, r, string(k))
 		full := paintFromStart(t, r.lx.Text(0, r.lx.Len()))
-		if got, want := fmt.Sprint(r.h.Tokens()), fmt.Sprint(full); got != want {
-			t.Fatalf("key %d %q: repaint\n%s\nfull paint\n%s", i, k, got, want)
+		{
+			got, want := fmt.Sprint(r.h.Tokens()), fmt.Sprint(full)
+			require.Equalf(t, want, got, "key %d %q: repaint\n%s\nfull paint\n%s", i, k, got, want)
 		}
 	}
 }
@@ -215,13 +203,9 @@ func TestRepaintGenerated(t *testing.T) {
 func paintFromStart(t *testing.T, text []byte) []statelex.Token {
 	t.Helper()
 	lx, err := statelex.New(newModeSet())
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	ch, err := lx.Apply(statelex.Insert(0, text))
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	h := &paint.Highlighter{Styles: styles}
 	h.Repaint(ch)
 	return h.Tokens()
@@ -238,14 +222,12 @@ func TestPromptBeforeFirstKey(t *testing.T) {
 	deadline := time.Now().Add(time.Second)
 	for out.String() != prompt+"\n" {
 		if time.Now().After(deadline) {
-			t.Fatalf("output %q before the first key, want %q", out.String(), prompt+"\n")
+			require.FailNowf(t, "", "output %q before the first key, want %q", out.String(), prompt+"\n")
 		}
 		time.Sleep(time.Millisecond)
 	}
 	pw.Close()
-	if err := <-done; err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, <-done)
 }
 
 // syncBuffer is a bytes.Buffer that two goroutines can use.

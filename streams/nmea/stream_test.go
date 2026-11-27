@@ -4,6 +4,8 @@ import (
 	"math/rand"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"github.com/xiam/bytescan"
 	"github.com/xiam/bytescan/streamtest"
 )
@@ -18,15 +20,17 @@ func TestLongRun(t *testing.T) {
 	res := streamtest.Run(t, newScanner, gen)
 	records := int64(gen.Records())
 	for _, typ := range []bytescan.TokenType{start, address, checksum, eol} {
-		if got := res.Counts[typ]; got != records {
-			t.Errorf("lexed %d %s, want one per sentence (%d)", got, typ, records)
+		{
+			got := res.Counts[typ]
+			assert.Equalf(t, records, got, "lexed %d %s, want one per sentence (%d)", got, typ, records)
 		}
 	}
-	if got := res.Counts[bytescan.TokenTypeUnknown]; got != 0 {
-		t.Errorf("lexed %d UNKNOWN in a clean stream", got)
+	{
+		got := res.Counts[bytescan.TokenTypeUnknown]
+		assert.Zerof(t, got, "lexed %d UNKNOWN in a clean stream", got)
 	}
 	if res.Bytes != gen.Bytes() {
-		t.Errorf("Run read %d bytes, the generator wrote %d", res.Bytes, gen.Bytes())
+		assert.Failf(t, "", "Run read %d bytes, the generator wrote %d", res.Bytes, gen.Bytes())
 	}
 }
 
@@ -46,7 +50,7 @@ func (k *injectionChecker) check(l *bytescan.Token) bool {
 	end := k.cur.Offset + int64(k.cur.Len)
 	if !k.have || off >= end {
 		if k.have && off == end && l.Type() != start {
-			k.t.Fatalf("after the garbage at %d: got %s %q, want START", k.cur.Offset, l.Type(), l.Text())
+			require.FailNowf(k.t, "", "after the garbage at %d: got %s %q, want START", k.cur.Offset, l.Type(), l.Text())
 		}
 		k.cur, k.have = k.c.NextInjection()
 		end = k.cur.Offset + int64(k.cur.Len)
@@ -54,7 +58,7 @@ func (k *injectionChecker) check(l *bytescan.Token) bool {
 	in := k.have && off >= k.cur.Offset && off < end
 	if in {
 		if off+int64(len(l.Text())) > end {
-			k.t.Fatalf("at %d: %s %q crosses the end of the garbage at %d", off, l.Type(), l.Text(), end)
+			require.FailNowf(k.t, "", "at %d: %s %q crosses the end of the garbage at %d", off, l.Type(), l.Text(), end)
 		}
 	}
 	return in
@@ -73,7 +77,7 @@ func TestCorruption(t *testing.T) {
 	check := func(l *bytescan.Token) {
 		if !k.check(l) {
 			if l.Type() == bytescan.TokenTypeUnknown {
-				t.Fatalf("at %d: UNKNOWN %q outside the noise", l.ByteOffset(), l.Text())
+				require.FailNowf(t, "", "at %d: UNKNOWN %q outside the noise", l.ByteOffset(), l.Text())
 			}
 			return
 		}
@@ -81,20 +85,20 @@ func TestCorruption(t *testing.T) {
 		case bytescan.TokenTypeUnknown, field, address, comma:
 			seen[l.Type()]++
 		default:
-			t.Fatalf("at %d: got %s %q inside the noise", l.ByteOffset(), l.Type(), l.Text())
+			require.FailNowf(t, "", "at %d: got %s %q inside the noise", l.ByteOffset(), l.Type(), l.Text())
 		}
 	}
 	res := streamtest.Run(t, newScanner, c, streamtest.WithTokenFunc(check))
 	for _, typ := range []bytescan.TokenType{bytescan.TokenTypeUnknown, field, address, comma} {
-		if seen[typ] == 0 {
-			t.Errorf("no %s token inside the noise: %v", typ, seen)
-		}
+		assert.NotZerof(t, seen[typ], "no %s token inside the noise: %v", typ, seen)
 	}
-	if got, want := res.Counts[bytescan.TokenTypeUnknown], seen[bytescan.TokenTypeUnknown]; got != want {
-		t.Errorf("lexed %d UNKNOWN, %d of them inside the noise", got, want)
+	{
+		got, want := res.Counts[bytescan.TokenTypeUnknown], seen[bytescan.TokenTypeUnknown]
+		assert.Equalf(t, want, got, "lexed %d UNKNOWN, %d of them inside the noise", got, want)
 	}
-	if got, want := res.Counts[start], int64(gen.Records()); got != want {
-		t.Errorf("lexed %d START, want one per sentence (%d)", got, want)
+	{
+		got, want := res.Counts[start], int64(gen.Records())
+		assert.Equalf(t, want, got, "lexed %d START, want one per sentence (%d)", got, want)
 	}
 	t.Logf("%d noise runs lexed as %v", c.Injected(), seen)
 }
@@ -148,23 +152,21 @@ func TestUndelimitedRun(t *testing.T) {
 	var full int64
 	check := func(l *bytescan.Token) {
 		if l.Type() != field || l.Len() > maxRun {
-			t.Fatalf("at %d: got %s of %d runes, want FIELD of at most %d", l.ByteOffset(), l.Type(), l.Len(), maxRun)
+			require.FailNowf(t, "", "at %d: got %s of %d runes, want FIELD of at most %d", l.ByteOffset(), l.Type(), l.Len(), maxRun)
 		}
 		if l.Len() == maxRun {
 			full++
 		}
 	}
 	res := streamtest.Run(t, newScanner, gen, streamtest.WithTokenFunc(check))
-	if res.Bytes < 16<<10 {
-		t.Fatalf("lexed %d bytes, want at least 16 KiB", res.Bytes)
-	}
+	require.GreaterOrEqualf(t, res.Bytes, int64(16<<10), "lexed %d bytes, want at least 16 KiB", res.Bytes)
 	want := res.Bytes / maxRun
 	pieces := want
 	if res.Bytes%maxRun != 0 {
 		pieces++
 	}
 	if full != want || res.Tokens != pieces {
-		t.Fatalf("lexed %d tokens, %d of %d runes, from %d bytes; want %d tokens, %d of them full",
+		require.FailNowf(t, "", "lexed %d tokens, %d of %d runes, from %d bytes; want %d tokens, %d of them full",
 			res.Tokens, full, maxRun, res.Bytes, pieces, want)
 	}
 }

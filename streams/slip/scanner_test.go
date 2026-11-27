@@ -8,16 +8,18 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"github.com/xiam/bytescan"
 	"github.com/xiam/bytescan-examples/internal/guardtest"
 	"github.com/xiam/bytescan-examples/internal/hexdump"
-	"github.com/xiam/bytescan-examples/internal/lexdump"
+	"github.com/xiam/bytescan-examples/internal/lextest"
 	"github.com/xiam/bytescan/bytesource"
 	"github.com/xiam/bytescan/streamtest"
 )
 
 func TestGolden(t *testing.T) {
-	lexdump.Golden(t, hexdump.Dumper, newScanner)
+	lextest.Golden(t, hexdump.Dumper, newScanner)
 }
 
 // TestGuard checks the production guard: it is streamtest.ByteGuard;
@@ -25,9 +27,7 @@ func TestGolden(t *testing.T) {
 // maxRun bytes, with no guard error and bounded memory; and a candidate
 // longer than the guard fails Next with the guard error.
 func TestGuard(t *testing.T) {
-	if tokenGuard != streamtest.ByteGuard {
-		t.Fatalf("tokenGuard = %d, want streamtest.ByteGuard (%d)", tokenGuard, streamtest.ByteGuard)
-	}
+	require.Equalf(t, streamtest.ByteGuard, tokenGuard, "tokenGuard = %d, want streamtest.ByteGuard (%d)", tokenGuard, streamtest.ByteGuard)
 	guardtest.Bounded(t, newScanner, streamtest.NewGenerator(80, undelimitedRecord()), maxRun, dataType)
 
 	// tokenGuard+1 bytes of 0xFF exceed the guard, which counts bytes, by one.
@@ -46,9 +46,7 @@ func tokens(t *testing.T, input []byte) string {
 		if err == io.EOF {
 			return strings.Join(got, " ")
 		}
-		if err != nil {
-			t.Fatal(err)
-		}
+		require.NoError(t, err)
 		got = append(got, fmt.Sprintf("%s:%x", l.Type(), bytesource.Bytes(l.Text())))
 	}
 }
@@ -71,8 +69,9 @@ func TestEscapes(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := tokens(t, []byte(tt.input)); got != tt.want {
-				t.Errorf("tokens = %s, want %s", got, tt.want)
+			{
+				got := tokens(t, []byte(tt.input))
+				assert.Equalf(t, tt.want, got, "tokens = %s, want %s", got, tt.want)
 			}
 		})
 	}
@@ -112,16 +111,14 @@ func TestUndelimitedRun(t *testing.T) {
 	)
 	res := streamtest.Run(t, newScanner, gen, streamtest.WithTokenFunc(func(l *bytescan.Token) {
 		if l.Type() != dataType {
-			t.Fatalf("%s at %d, want only DATA", l.Type(), l.Offset())
+			require.FailNowf(t, "", "%s at %d, want only DATA", l.Type(), l.Offset())
 		}
 		if int64(l.Offset()) != pos {
-			t.Fatalf("DATA at %d, want the next token at %d", l.Offset(), pos)
+			require.FailNowf(t, "", "DATA at %d, want the next token at %d", l.Offset(), pos)
 		}
-		if last >= 0 && last != maxRun {
-			t.Fatalf("DATA of %d bytes before the one at %d, want %d: only the last piece is shorter", last, pos, maxRun)
-		}
+		require.Falsef(t, last >= 0 && last != maxRun, "DATA of %d bytes before the one at %d, want %d: only the last piece is shorter", last, pos, maxRun)
 		if l.Len() > maxRun {
-			t.Fatalf("DATA of %d bytes at %d, want at most %d", l.Len(), pos, maxRun)
+			require.FailNowf(t, "", "DATA of %d bytes at %d, want at most %d", l.Len(), pos, maxRun)
 		}
 		for _, r := range l.Text() {
 			if r >= 0x80 {
@@ -131,13 +128,10 @@ func TestUndelimitedRun(t *testing.T) {
 		last = l.Len()
 		pos += int64(l.Len())
 	}))
-	if pos != res.Bytes {
-		t.Errorf("tokens end at %d, want the end of the stream at %d", pos, res.Bytes)
-	}
-	if high < 16<<10 {
-		t.Errorf("%d bytes of 0x80 or above, want at least 16 KiB", high)
-	}
-	if want := (res.Bytes + maxRun - 1) / maxRun; res.Counts[dataType] != want {
-		t.Errorf("DATA tokens = %d, want %d", res.Counts[dataType], want)
+	assert.Equalf(t, res.Bytes, pos, "tokens end at %d, want the end of the stream at %d", pos, res.Bytes)
+	assert.GreaterOrEqualf(t, high, int64(16<<10), "%d bytes of 0x80 or above, want at least 16 KiB", high)
+	{
+		want := (res.Bytes + maxRun - 1) / maxRun
+		assert.Equalf(t, want, res.Counts[dataType], "DATA tokens = %d, want %d", res.Counts[dataType], want)
 	}
 }

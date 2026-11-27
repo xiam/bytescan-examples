@@ -5,6 +5,8 @@ import (
 	"math/rand"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"github.com/xiam/bytescan"
 	"github.com/xiam/bytescan/streamtest"
 )
@@ -18,19 +20,22 @@ func TestLongRun(t *testing.T) {
 	gen := streamtest.NewGenerator(1, syslogRecord)
 	res := streamtest.Run(t, newScanner, gen)
 	records := int64(gen.Records())
-	if got := res.Counts[pri]; got != records {
-		t.Errorf("lexed %d PRI, want one per message (%d)", got, records)
+	{
+		got := res.Counts[pri]
+		assert.Equalf(t, records, got, "lexed %d PRI, want one per message (%d)", got, records)
 	}
 	// An octet-counted frame starts with MSG_LEN, a newline-ended one ends
 	// with LF; a MSG read by length holds its LF bytes.
-	if got := res.Counts[msgLen] + res.Counts[lf]; got != records || res.Counts[msgLen] == 0 || res.Counts[lf] == 0 {
-		t.Errorf("lexed %d MSG_LEN and %d LF, want one of them per message (%d)", res.Counts[msgLen], res.Counts[lf], records)
+	{
+		got := res.Counts[msgLen] + res.Counts[lf]
+		assert.Falsef(t, got != records || res.Counts[msgLen] == 0 || res.Counts[lf] == 0, "lexed %d MSG_LEN and %d LF, want one of them per message (%d)", res.Counts[msgLen], res.Counts[lf], records)
 	}
-	if got := res.Counts[unknown]; got != 0 {
-		t.Errorf("lexed %d UNKNOWN in a clean stream", got)
+	{
+		got := res.Counts[unknown]
+		assert.Zerof(t, got, "lexed %d UNKNOWN in a clean stream", got)
 	}
 	if res.Bytes != gen.Bytes() {
-		t.Errorf("Run read %d bytes, the generator wrote %d", res.Bytes, gen.Bytes())
+		assert.Failf(t, "", "Run read %d bytes, the generator wrote %d", res.Bytes, gen.Bytes())
 	}
 }
 
@@ -66,7 +71,7 @@ func TestCorruption(t *testing.T) {
 		end := cur.Offset + int64(cur.Len)
 		if !have || off >= end {
 			if have && off == end && l.Type() != msgLen && l.Type() != pri {
-				t.Fatalf("after the garbage at %d: got %s %q, want MSG_LEN or PRI", cur.Offset, l.Type(), l.Text())
+				require.FailNowf(t, "", "after the garbage at %d: got %s %q, want MSG_LEN or PRI", cur.Offset, l.Type(), l.Text())
 			}
 			cur, have = c.NextInjection()
 			end = cur.Offset + int64(cur.Len)
@@ -74,26 +79,25 @@ func TestCorruption(t *testing.T) {
 		in := have && off >= cur.Offset && off < end
 		switch {
 		case in && off+int64(l.Len()) > end:
-			t.Fatalf("at %d: %s crosses the end of the garbage at %d", off, l.Type(), end)
+			require.FailNowf(t, "", "at %d: %s crosses the end of the garbage at %d", off, l.Type(), end)
 		case in && off+int64(l.Len()) == end:
 			if l.Type() != lf {
-				t.Fatalf("at %d: got %s at the end of the garbage, want LF", off, l.Type())
+				require.FailNowf(t, "", "at %d: got %s at the end of the garbage, want LF", off, l.Type())
 			}
 		case in:
 			if l.Type() != unknown {
-				t.Fatalf("at %d: got %s %q inside the garbage, want UNKNOWN", off, l.Type(), l.Text())
+				require.FailNowf(t, "", "at %d: got %s %q inside the garbage, want UNKNOWN", off, l.Type(), l.Text())
 			}
 			inside++
 		case l.Type() == unknown:
-			t.Fatalf("at %d: UNKNOWN %q outside the garbage", off, l.Text())
+			require.FailNowf(t, "", "at %d: UNKNOWN %q outside the garbage", off, l.Text())
 		}
 	}
 	res := streamtest.Run(t, newScanner, c, streamtest.WithTokenFunc(check))
-	if res.Counts[unknown] != inside || inside == 0 {
-		t.Fatalf("lexed %d UNKNOWN, %d inside garbage", res.Counts[unknown], inside)
-	}
-	if got, want := res.Counts[pri], int64(gen.Records()); got != want {
-		t.Fatalf("lexed %d PRI, want one per message (%d)", got, want)
+	require.Falsef(t, res.Counts[unknown] != inside || inside == 0, "lexed %d UNKNOWN, %d inside garbage", res.Counts[unknown], inside)
+	{
+		got, want := res.Counts[pri], int64(gen.Records())
+		require.Equalf(t, want, got, "lexed %d PRI, want one per message (%d)", got, want)
 	}
 	t.Logf("%d garbage lines, %d UNKNOWN tokens", c.Injected(), inside)
 }
@@ -152,21 +156,19 @@ func TestUndelimitedRun(t *testing.T) {
 			var got int64
 			check := func(l *bytescan.Token) {
 				if l.Type() == unknown {
-					t.Fatalf("at %d: UNKNOWN %q", l.Offset(), l.Text())
+					require.FailNowf(t, "", "at %d: UNKNOWN %q", l.Offset(), l.Text())
 				}
 				off := int64(l.Offset())
 				if off < at || off >= at+n {
 					return
 				}
 				if l.Type() != tc.typ || off != at+got || l.Len() > tc.piece || (got+int64(l.Len()) < n && l.Len() != tc.piece) {
-					t.Fatalf("at %d: %s of %d bytes, want a %s piece of %d bytes at %d", off, l.Type(), l.Len(), tc.typ, tc.piece, at+got)
+					require.FailNowf(t, "", "at %d: %s of %d bytes, want a %s piece of %d bytes at %d", off, l.Type(), l.Len(), tc.typ, tc.piece, at+got)
 				}
 				got += int64(l.Len())
 			}
 			streamtest.Run(t, newScanner, src, streamtest.WithTokenFunc(check), streamtest.WithSampleEvery(warmUp))
-			if got != n {
-				t.Errorf("lexed %d bytes of %s, want %d", got, tc.typ, n)
-			}
+			assert.Equalf(t, int64(n), got, "lexed %d bytes of %s, want %d", got, tc.typ, n)
 		})
 	}
 }
@@ -186,7 +188,7 @@ func TestDigitRun(t *testing.T) {
 			return
 		}
 		if int64(l.Offset()) != at+got || l.Len() > maxRun {
-			t.Fatalf("at %d: UNKNOWN of %d bytes, want a piece of the digit run at %d", l.Offset(), l.Len(), at+got)
+			require.FailNowf(t, "", "at %d: UNKNOWN of %d bytes, want a piece of the digit run at %d", l.Offset(), l.Len(), at+got)
 		}
 		got += int64(l.Len())
 	}
@@ -199,15 +201,9 @@ func TestDigitRun(t *testing.T) {
 		}
 	}
 	res := streamtest.Run(t, newScanner, src, streamtest.WithTokenFunc(tail), streamtest.WithSampleEvery(warmUp))
-	if got != n {
-		t.Errorf("lexed %d bytes of UNKNOWN, want the %d digits", got, n)
-	}
-	if len(after) == 0 || (after[0] != msgLen && after[0] != pri) {
-		t.Errorf("tokens after the run: %v, want a frame start", after)
-	}
-	if res.Counts[msgLen] == 0 {
-		t.Error("lexed no MSG_LEN")
-	}
+	assert.Equalf(t, int64(n), got, "lexed %d bytes of UNKNOWN, want the %d digits", got, n)
+	assert.Falsef(t, len(after) == 0 || (after[0] != msgLen && after[0] != pri), "tokens after the run: %v, want a frame start", after)
+	assert.NotZero(t, res.Counts[msgLen], "lexed no MSG_LEN")
 }
 
 // TestCorruptLength frames the stream with a length of 9,999,999,999 bytes,
@@ -226,12 +222,13 @@ func TestCorruptLength(t *testing.T) {
 			return
 		}
 		if l.Type() != msg || off != body+got || l.Len() > maxPiece {
-			t.Fatalf("at %d: %s of %d bytes, want a MSG piece of at most %d bytes at %d", off, l.Type(), l.Len(), maxPiece, body+got)
+			require.FailNowf(t, "", "at %d: %s of %d bytes, want a MSG piece of at most %d bytes at %d", off, l.Type(), l.Len(), maxPiece, body+got)
 		}
 		got += int64(l.Len())
 	}
 	res := streamtest.Run(t, newScanner, src, streamtest.WithTokenFunc(check), streamtest.WithSampleEvery(warmUp))
-	if want := res.Bytes - body; got != want {
-		t.Errorf("lexed %d bytes of MSG after the frame, want the rest of the stream (%d)", got, want)
+	{
+		want := res.Bytes - body
+		assert.Equalf(t, want, got, "lexed %d bytes of MSG after the frame, want the rest of the stream (%d)", got, want)
 	}
 }

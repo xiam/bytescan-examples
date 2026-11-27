@@ -4,7 +4,7 @@ import (
 	"encoding/binary"
 	"testing"
 
-	"github.com/xiam/bytescan-examples/internal/lexdump"
+	"github.com/xiam/bytescan-examples/internal/lextest"
 )
 
 // The binary test inputs are written byte by byte here, so the
@@ -24,7 +24,7 @@ var inputs = map[string][]byte{
 }
 
 func TestInputs(t *testing.T) {
-	lexdump.Inputs(t, inputs)
+	lextest.Inputs(t, inputs)
 }
 
 var (

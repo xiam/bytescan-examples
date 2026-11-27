@@ -5,6 +5,8 @@ import (
 	"math/rand"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"github.com/xiam/bytescan"
 	"github.com/xiam/bytescan/streamtest"
 )
@@ -84,21 +86,21 @@ func TestLongRun(t *testing.T) {
 	gen := streamtest.NewGenerator(54, record(false))
 	res := streamtest.Run(t, newScanner, gen, streamtest.WithTokenFunc(func(l *bytescan.Token) {
 		if l.Type() == syncType && l.Offset()%packetSize != 0 {
-			t.Fatalf("SYNC at offset %d, not at a packet boundary", l.Offset())
+			require.FailNowf(t, "", "SYNC at offset %d, not at a packet boundary", l.Offset())
 		}
 	}))
 	packets := int64(gen.Records())
 	for _, typ := range []bytescan.TokenType{syncType, headerType} {
-		if got := res.Counts[typ]; got != packets {
-			t.Errorf("%s tokens = %d, want one per packet, %d", typ, got, packets)
+		{
+			got := res.Counts[typ]
+			assert.Equalf(t, packets, got, "%s tokens = %d, want one per packet, %d", typ, got, packets)
 		}
 	}
-	if n := res.Counts[bytescan.TokenTypeUnknown]; n != 0 {
-		t.Errorf("UNKNOWN tokens = %d, want 0", n)
+	{
+		n := res.Counts[bytescan.TokenTypeUnknown]
+		assert.Zerof(t, n, "UNKNOWN tokens = %d, want 0", n)
 	}
-	if res.Counts[adaptationField] == 0 || res.Counts[payload] == 0 {
-		t.Errorf("counts = %v, want ADAPTATION_FIELD and PAYLOAD tokens", res.Counts)
-	}
+	assert.Falsef(t, res.Counts[adaptationField] == 0 || res.Counts[payload] == 0, "counts = %v, want ADAPTATION_FIELD and PAYLOAD tokens", res.Counts)
 }
 
 // garbageAlphabet is every byte but 0x47, so a garbage run holds no sync
@@ -162,9 +164,7 @@ func TestCorruption(t *testing.T) {
 		if !afterGarbage && len(pending) > 0 && pending[0].Record == rec {
 			in := pending[0]
 			pending = pending[1:]
-			if in.Offset != start {
-				t.Fatalf("garbage at %d, want it at %d, before record %d", in.Offset, start, rec)
-			}
+			require.Equalf(t, start, in.Offset, "garbage at %d, want it at %d, before record %d", in.Offset, start, rec)
 			seg = segment{start: start, end: start + int64(in.Len), garbage: true}
 			afterGarbage = true
 			garbage++
@@ -186,39 +186,36 @@ func TestCorruption(t *testing.T) {
 	res := streamtest.Run(t, newScanner, src, streamtest.WithTokenFunc(func(l *bytescan.Token) {
 		off, end := int64(l.Offset()), int64(l.Offset()+l.Len())
 		if off != pos {
-			t.Fatalf("%s at %d, want the next token at %d", l.Type(), off, pos)
+			require.FailNowf(t, "", "%s at %d, want the next token at %d", l.Type(), off, pos)
 		}
 		pos = end
 		for off >= seg.end {
 			layout()
 		}
 		if end > seg.end {
-			t.Fatalf("%s at %d-%d crosses the segment end %d", l.Type(), off, end, seg.end)
+			require.FailNowf(t, "", "%s at %d-%d crosses the segment end %d", l.Type(), off, end, seg.end)
 		}
 		switch {
 		case seg.garbage || seg.lost:
 			if l.Type() != bytescan.TokenTypeUnknown || l.Len() != 1 {
-				t.Fatalf("%s of %d bytes at %d, want one UNKNOWN byte (segment %+v)", l.Type(), l.Len(), off, seg)
+				require.FailNowf(t, "", "%s of %d bytes at %d, want one UNKNOWN byte (segment %+v)", l.Type(), l.Len(), off, seg)
 			}
 		case off == seg.start:
 			if l.Type() != syncType {
-				t.Fatalf("%s at %d, want SYNC at the packet start", l.Type(), off)
+				require.FailNowf(t, "", "%s at %d, want SYNC at the packet start", l.Type(), off)
 			}
 		default:
 			if l.Type() != headerType && l.Type() != adaptationField && l.Type() != payload {
-				t.Fatalf("%s at %d, inside packet %d-%d", l.Type(), off, seg.start, seg.end)
+				require.FailNowf(t, "", "%s at %d, inside packet %d-%d", l.Type(), off, seg.start, seg.end)
 			}
 		}
 	}))
-	if pos != res.Bytes {
-		t.Errorf("tokens end at %d, want the end of the stream at %d", pos, res.Bytes)
+	assert.Equalf(t, res.Bytes, pos, "tokens end at %d, want the end of the stream at %d", pos, res.Bytes)
+	{
+		got, want := res.Counts[syncType], packets-lostPackets
+		assert.Equalf(t, want, got, "SYNC tokens = %d, want %d", got, want)
 	}
-	if got, want := res.Counts[syncType], packets-lostPackets; got != want {
-		t.Errorf("SYNC tokens = %d, want %d", got, want)
-	}
-	if garbage == 0 || lostPackets == 0 {
-		t.Errorf("%d garbage runs and %d unconfirmed packets, want some of each", garbage, lostPackets)
-	}
+	assert.Falsef(t, garbage == 0 || lostPackets == 0, "%d garbage runs and %d unconfirmed packets, want some of each", garbage, lostPackets)
 	t.Logf("%d packets, %d garbage runs, %d packets unconfirmed (garbage on both sides)", packets, garbage, lostPackets)
 }
 
@@ -231,7 +228,5 @@ func TestReleaseBeforeRead(t *testing.T) {
 	ls := streamtest.LexRetainedBytes(t, src, 1<<10, func(cur bytescan.Cursor) *driver {
 		return newDriver(cur, bytescan.WithMaxTokenBytes(tokenGuard))
 	})
-	if len(ls) == 0 {
-		t.Fatal("no tokens")
-	}
+	require.NotZero(t, len(ls), "no tokens")
 }

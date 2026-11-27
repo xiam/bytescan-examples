@@ -54,7 +54,7 @@ A group of related examples shares one directory, such as
 
   ```go
   func TestGolden(t *testing.T) {
-      lexdump.Golden(t, lexdump.Dumper{}, newScanner)
+      lextest.Golden(t, lexdump.Dumper{}, newScanner)
   }
   ```
 
@@ -89,7 +89,7 @@ The output of `go run` on an input file is exactly its golden file.
 
 ## lexdump
 
-[`internal/lexdump`](../internal/lexdump) is the one helper every example uses:
+[`internal/lexdump`](../internal/lexdump) writes the example output:
 
 - `Dumper.Dump(w, lx)` reads `lx` until `io.EOF` and writes one line per
   token. `lx` is any `bytescan.Source`: a `*bytescan.Scanner`, a filter
@@ -100,22 +100,26 @@ The output of `go run` on an input file is exactly its golden file.
   writes `LINE:COLUMN TYPE "TEXT"`: the 1-based line, the 0-based rune column,
   the type and the text as a Go quoted string. An example whose input is not
   text supplies its own `Format`.
-- `lexdump.Golden(t, d, newScanner)` runs every `testdata/*.input` through
+
+[`internal/lextest`](../internal/lextest) supplies checks for tests. It uses
+Testify without adding assertion dependencies to example programs:
+
+- `lextest.Golden(t, d, newScanner)` runs every `testdata/*.input` through
   `newScanner` and `d`, and compares the output with the `.golden` file of the
   same name. `go test -update` rewrites the golden files.
-- `lexdump.Compare(t, golden, got)` compares any output with one golden
+- `lextest.Compare(t, golden, got)` compares any output with one golden
   file, and `go test -update` rewrites it. An example whose output is not a
   token dump uses it ([highlight](../highlight)).
-- `lexdump.GoldenWithout(t, newView, drop)` checks a filtered view against
+- `lextest.GoldenWithout(t, newView, drop)` checks a filtered view against
   the same golden files without the lines of the dropped types, so a filter
   needs no golden files of its own ([ansi](../ansi),
   [whitespace](../whitespace)).
-- `lexdump.Tiling(t, newScanner)` checks that the tokens of every input join
+- `lextest.Tiling(t, newScanner)` checks that the tokens of every input join
   to the input, which a mode driver can break when it switches scanners
   ([ruby](../ruby)).
-- `lexdump.Inputs(t, inputs)` checks that each committed binary
+- `lextest.Inputs(t, inputs)` checks that each committed binary
   `testdata/<name>.input` equals the bytes the test builds for it; `go test
-  -update` rewrites the inputs first. `lexdump.Sequence(first, n)` builds
+  -update` rewrites the inputs first. `lextest.Sequence(first, n)` builds
   counting bytes that show where a field is cut.
 
 ## Token types
@@ -162,7 +166,7 @@ In an example, a filter is a `bytescan.Source` in a file of its own
 [python](../python)), so `main.go` dumps it as it dumps a
 scanner. It adds, drops or relabels tokens by the lexical rules of the
 language reference, and never reports that a program is invalid. Its test
-uses `lexdump.GoldenWithout` when it only drops types.
+uses `lextest.GoldenWithout` when it only drops types.
 
 ## Modes: several scanners over one cursor
 
@@ -216,7 +220,7 @@ instead of `driver.go`, with an exported `New`: the
 [`sse/ssedriver`](../streams/sse/ssedriver), which the
 [ssejson example](../streams/ssejson) imports. The README has a
 section on the driver, after **Tokens**, that names its modes and states how
-it follows the three rules. A mode driver over text has a `lexdump.Tiling`
+it follows the three rules. A mode driver over text has a `lextest.Tiling`
 test.
 
 Every scanner returns a plain `io.EOF` at the end of the input, whatever its

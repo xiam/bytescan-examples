@@ -4,15 +4,17 @@ import (
 	"bytes"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"github.com/xiam/bytescan"
 	"github.com/xiam/bytescan-examples/internal/guardtest"
 	"github.com/xiam/bytescan-examples/internal/hexdump"
-	"github.com/xiam/bytescan-examples/internal/lexdump"
+	"github.com/xiam/bytescan-examples/internal/lextest"
 	"github.com/xiam/bytescan/streamtest"
 )
 
 func TestGolden(t *testing.T) {
-	lexdump.Golden(t, hexdump.Dumper, newScanner)
+	lextest.Golden(t, hexdump.Dumper, newScanner)
 }
 
 // TestGuard checks the production guard: it is streamtest.ByteGuard; a
@@ -21,9 +23,7 @@ func TestGolden(t *testing.T) {
 // maxPiece bytes, with no guard error and bounded memory; and a candidate
 // longer than the guard fails Next with the guard error.
 func TestGuard(t *testing.T) {
-	if tokenGuard != streamtest.ByteGuard {
-		t.Fatalf("tokenGuard = %d, want streamtest.ByteGuard (%d)", tokenGuard, streamtest.ByteGuard)
-	}
+	require.Equalf(t, streamtest.ByteGuard, tokenGuard, "tokenGuard = %d, want streamtest.ByteGuard (%d)", tokenGuard, streamtest.ByteGuard)
 	gen := streamtest.NewGenerator(80, guardtest.Filler(), streamtest.WithBudget(4*maxPiece))
 	src := streamtest.Prefix(gen, []byte{connect, 0xFF, 0xFF, 0xFF, 0x7F})
 	guardtest.Bounded(t, newScanner, src, maxPiece, body,
@@ -60,13 +60,9 @@ func TestPieces(t *testing.T) {
 		{payload, maxPiece}, {payload, 70000 - maxPiece},
 		{fixedHeader, 1}, {remainingLength, 1},
 	}
-	if len(got) != len(want) {
-		t.Fatalf("tokens = %v, want %v", got, want)
-	}
+	require.Equalf(t, len(want), len(got), "tokens = %v, want %v", got, want)
 	for i := range want {
-		if got[i] != want[i] {
-			t.Fatalf("tokens = %v, want %v", got, want)
-		}
+		require.Equalf(t, want[i], got[i], "tokens = %v, want %v", got, want)
 	}
 }
 
@@ -87,11 +83,13 @@ func TestLengthValue(t *testing.T) {
 		{[]byte{0xFF, 0xFF, 0xFF, 0x7F}, 268435455},
 	}
 	for _, tc := range cases {
-		if got := lengthValue(tc.b); got != tc.n {
-			t.Errorf("lengthValue(% x) = %d, want %d", tc.b, got, tc.n)
+		{
+			got := lengthValue(tc.b)
+			assert.Equalf(t, tc.n, got, "lengthValue(% x) = %d, want %d", tc.b, got, tc.n)
 		}
-		if got := encodeLength(int(tc.n), 0); !bytes.Equal(got, tc.b) {
-			t.Errorf("encodeLength(%d) = % x, want % x", tc.n, got, tc.b)
+		{
+			got := encodeLength(int(tc.n), 0)
+			assert.Truef(t, bytes.Equal(got, tc.b), "encodeLength(%d) = % x, want % x", tc.n, got, tc.b)
 		}
 	}
 }
@@ -105,7 +103,8 @@ func TestReleaseBeforeRead(t *testing.T) {
 	ls := streamtest.LexRetainedBytes(t, bytes.NewReader(bigPublish()), 1<<10, func(cur bytescan.Cursor) *driver {
 		return newDriver(cur, bytescan.WithMaxTokenBytes(tokenGuard))
 	})
-	if n := len(ls); n != 8 {
-		t.Errorf("lexed %d tokens, want 8", n)
+	{
+		n := len(ls)
+		assert.Equalf(t, 8, n, "lexed %d tokens, want 8", n)
 	}
 }

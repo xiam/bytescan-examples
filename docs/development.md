@@ -11,7 +11,8 @@ binary/<format>/          the binary file examples, with one README.md
 streams/<name>/           the long-running stream examples
 streams/sse/ssedriver/    the SSE mode driver, a package that ssejson imports
 cursor/<name>/            programs that use the cursor package on its own
-internal/lexdump/         the dumper and golden-file checks every example uses
+internal/lexdump/         the dumper every example uses
+internal/lextest/         the golden-file and input checks used only by tests
 internal/hexdump/         the hex view of the binary and byte-stream examples
 internal/streamkit/       shared helpers of the stream examples
 internal/guardtest/       the per-token guard checks of the stream examples
@@ -31,6 +32,10 @@ go test -race ./...
 
 How to run one example, and how to update its golden files, is in
 [the example standard](standard.md#running).
+
+Tests use Testify. Keep diagnostic rendering behind a failure guard when it
+would add work to a successful check. In stream callbacks, `Token.Text()`
+allocates a string; rendering it only on failure preserves heap sampling.
 
 ## Running the examples against a bytescan checkout
 

@@ -1,4 +1,4 @@
-package lexdump
+package lextest
 
 import (
 	"bytes"
@@ -8,7 +8,10 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"github.com/xiam/bytescan"
+	"github.com/xiam/bytescan-examples/internal/lexdump"
 )
 
 // inputFiles returns the testdata/*.input files of the calling package. It
@@ -16,12 +19,8 @@ import (
 func inputFiles(t *testing.T) []string {
 	t.Helper()
 	inputs, err := filepath.Glob(filepath.Join("testdata", "*.input"))
-	if err != nil {
-		t.Fatal(err)
-	}
-	if len(inputs) == 0 {
-		t.Fatal("no testdata/*.input files")
-	}
+	require.NoError(t, err)
+	require.NotZero(t, len(inputs), "no testdata/*.input files")
 	return inputs
 }
 
@@ -37,19 +36,16 @@ func GoldenWithout[L bytescan.Source](t *testing.T, newView func(io.Reader) L, d
 		golden := strings.TrimSuffix(input, ".input") + ".golden"
 		t.Run(filepath.Base(input), func(t *testing.T) {
 			f, err := os.Open(input)
-			if err != nil {
-				t.Fatal(err)
-			}
+			require.NoError(t, err)
 			defer f.Close()
 
 			var got bytes.Buffer
-			if err := (Dumper{}).Dump(&got, newView(f)); err != nil {
-				t.Fatalf("dump %s: %v", input, err)
+			{
+				err := (lexdump.Dumper{}).Dump(&got, newView(f))
+				require.NoErrorf(t, err, "dump %s: %v", input, err)
 			}
 			want, err := os.ReadFile(golden)
-			if err != nil {
-				t.Fatalf("%v (run go test -update to create it)", err)
-			}
+			require.NoErrorf(t, err, "%v (run go test -update to create it)", err)
 			var kept strings.Builder
 			for _, line := range strings.SplitAfter(string(want), "\n") {
 				if fields := strings.Fields(line); len(fields) > 1 && !drop(bytescan.TokenType(fields[1])) {
@@ -57,7 +53,7 @@ func GoldenWithout[L bytescan.Source](t *testing.T, newView func(io.Reader) L, d
 				}
 			}
 			if got.String() != kept.String() {
-				t.Errorf("filtered output differs from %s without the dropped lines\n--- got ---\n%s--- want ---\n%s", golden, got.String(), kept.String())
+				assert.Failf(t, "", "filtered output differs from %s without the dropped lines\n--- got ---\n%s--- want ---\n%s", golden, got.String(), kept.String())
 			}
 		})
 	}
@@ -70,9 +66,7 @@ func Tiling[L bytescan.Source](t *testing.T, newScanner func(io.Reader) L) {
 	t.Helper()
 	for _, input := range inputFiles(t) {
 		src, err := os.ReadFile(input)
-		if err != nil {
-			t.Fatal(err)
-		}
+		require.NoError(t, err)
 		lx := newScanner(bytes.NewReader(src))
 		var got strings.Builder
 		for {
@@ -81,12 +75,12 @@ func Tiling[L bytescan.Source](t *testing.T, newScanner func(io.Reader) L) {
 				break
 			}
 			if err != nil {
-				t.Fatalf("%s: after %d bytes: %v", input, got.Len(), err)
+				require.FailNowf(t, "", "%s: after %d bytes: %v", input, got.Len(), err)
 			}
 			got.WriteString(l.Text())
 		}
 		if got.String() != string(src) {
-			t.Errorf("%s: tokens join to %q, want the input", input, got.String())
+			assert.Failf(t, "", "%s: tokens join to %q, want the input", input, got.String())
 		}
 	}
 }
@@ -115,17 +109,11 @@ func Inputs[I Input](t *testing.T, inputs map[string]I) {
 			got = in(t)
 		}
 		if *update {
-			if err := os.WriteFile(path, got, 0o644); err != nil {
-				t.Fatal(err)
-			}
+			require.NoError(t, os.WriteFile(path, got, 0o644))
 		}
 		want, err := os.ReadFile(path)
-		if err != nil {
-			t.Fatal(err)
-		}
-		if !bytes.Equal(got, want) {
-			t.Errorf("%s differs from the bytes built in inputs_test.go; run go test -update", path)
-		}
+		require.NoError(t, err)
+		assert.Truef(t, bytes.Equal(got, want), "%s differs from the bytes built in inputs_test.go; run go test -update", path)
 	}
 }
 

@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"testing"
 
-	"github.com/xiam/bytescan-examples/internal/lexdump"
+	"github.com/xiam/bytescan-examples/internal/lextest"
 )
 
 // The binary test inputs are built here, so the testdata/*.input files are
@@ -26,7 +26,7 @@ var inputs = map[string]func() []byte{
 }
 
 func TestInputs(t *testing.T) {
-	lexdump.Inputs(t, inputs)
+	lextest.Inputs(t, inputs)
 }
 
 // The fixed header bytes of the packets in the tests (MQTT 3.1.1, section
@@ -143,7 +143,7 @@ func session() []byte {
 func lengths() []byte {
 	var b []byte
 	b = append(b, packet(publishHeader(false, 0, false), 1, str("a/b"), []byte("on"))...)
-	b = append(b, packet(publishHeader(false, 1, false), 2, str("big"), u16(4), lexdump.Sequence(0x00, 200))...)
+	b = append(b, packet(publishHeader(false, 1, false), 2, str("big"), u16(4), lextest.Sequence(0x00, 200))...)
 	b = append(b, packet(puback, 3, u16(4))...)
 	b = append(b, packet(publishHeader(false, 0, false), 4, str("t"), []byte("1234"))...)
 	return b

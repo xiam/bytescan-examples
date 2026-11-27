@@ -11,6 +11,8 @@ import (
 	"math/rand"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"github.com/xiam/bytescan"
 	"github.com/xiam/bytescan/cursor"
 	"github.com/xiam/bytescan/rules/core"
@@ -45,11 +47,10 @@ func Bounded[L bytescan.Source](t *testing.T, newScanner func(io.Reader) L, src 
 		longest = max(longest, l.Len())
 	}))
 	res := streamtest.Run(t, newScanner, src, opts...)
-	if longest > maxLen {
-		t.Errorf("the longest token is %d bytes, want at most %d", longest, maxLen)
-	}
-	if n := res.Counts[piece]; n < 2 {
-		t.Errorf("%d %s tokens, want a stream of pieces", n, piece)
+	assert.LessOrEqualf(t, longest, maxLen, "the longest token is %d bytes, want at most %d", longest, maxLen)
+	{
+		n := res.Counts[piece]
+		assert.GreaterOrEqualf(t, n, int64(2), "%d %s tokens, want a stream of pieces", n, piece)
 	}
 }
 
@@ -70,11 +71,9 @@ func Active(t *testing.T, lx *bytescan.Scanner, guard int, next func() (*bytesca
 		if errors.Is(err, cursor.ErrRetentionExceeded) {
 			return
 		}
-		if err != nil {
-			t.Fatalf("Next: %v, want an error that matches cursor.ErrRetentionExceeded", err)
-		}
+		require.NoErrorf(t, err, "Next: %v, want an error that matches cursor.ErrRetentionExceeded", err)
 		if l.Len() > guard {
-			t.Fatalf("%s token of %d bytes passed the guard of %d bytes", l.Type(), l.Len(), guard)
+			require.FailNowf(t, "", "%s token of %d bytes passed the guard of %d bytes", l.Type(), l.Len(), guard)
 		}
 	}
 }

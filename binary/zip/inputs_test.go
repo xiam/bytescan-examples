@@ -8,7 +8,8 @@ import (
 	"hash/crc32"
 	"testing"
 
-	"github.com/xiam/bytescan-examples/internal/lexdump"
+	"github.com/stretchr/testify/require"
+	"github.com/xiam/bytescan-examples/internal/lextest"
 )
 
 // The binary test inputs are built here, so the testdata/*.input files are
@@ -36,7 +37,7 @@ var inputs = map[string]func(t *testing.T) []byte{
 }
 
 func TestInputs(t *testing.T) {
-	lexdump.Inputs(t, inputs)
+	lextest.Inputs(t, inputs)
 }
 
 // rawFile is one file that archive/zip writes with CreateRaw: no data
@@ -64,19 +65,12 @@ func writeRaw(t *testing.T, comment string, files ...rawFile) []byte {
 			CompressedSize64:   uint64(len(f.data)),
 			UncompressedSize64: uint64(len(f.plain)),
 		})
-		if err != nil {
-			t.Fatal(err)
-		}
-		if _, err := w.Write(f.data); err != nil {
-			t.Fatal(err)
-		}
+		require.NoError(t, err)
+		_, err = w.Write(f.data)
+		require.NoError(t, err)
 	}
-	if err := zw.SetComment(comment); err != nil {
-		t.Fatal(err)
-	}
-	if err := zw.Close(); err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, zw.SetComment(comment))
+	require.NoError(t, zw.Close())
 	return buf.Bytes()
 }
 
@@ -104,15 +98,10 @@ func descriptor(t *testing.T) []byte {
 	var buf bytes.Buffer
 	zw := zip.NewWriter(&buf)
 	w, err := zw.CreateHeader(&zip.FileHeader{Name: "a.txt", Method: zip.Store, ModifiedDate: 0x5b6e, ModifiedTime: 0x6000})
-	if err != nil {
-		t.Fatal(err)
-	}
-	if _, err := w.Write([]byte("PK\x01\x02 in data\n")); err != nil {
-		t.Fatal(err)
-	}
-	if err := zw.Close(); err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
+	_, err = w.Write([]byte("PK\x01\x02 in data\n"))
+	require.NoError(t, err)
+	require.NoError(t, zw.Close())
 	return buf.Bytes()
 }
 

@@ -3,6 +3,9 @@ package main
 import (
 	"strings"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 // TestRun runs the program on its document and checks the whole output: the
@@ -27,10 +30,12 @@ line starting at 3:0: "broken: 🦄"
 done
 `
 	var out strings.Builder
-	if err := run(&out, strings.NewReader(document)); err != nil {
-		t.Fatalf("run: %v", err)
+	{
+		err := run(&out, strings.NewReader(document))
+		require.NoErrorf(t, err, "run: %v", err)
 	}
-	if got := out.String(); got != want {
-		t.Errorf("output:\n%s\nwant:\n%s", got, want)
+	{
+		got := out.String()
+		assert.Equalf(t, want, got, "output:\n%s\nwant:\n%s", got, want)
 	}
 }

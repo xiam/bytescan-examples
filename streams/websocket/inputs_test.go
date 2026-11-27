@@ -4,7 +4,7 @@ import (
 	"encoding/binary"
 	"testing"
 
-	"github.com/xiam/bytescan-examples/internal/lexdump"
+	"github.com/xiam/bytescan-examples/internal/lextest"
 )
 
 // The binary test inputs are built here, so the testdata/*.input files are
@@ -27,7 +27,7 @@ var inputs = map[string]func() []byte{
 }
 
 func TestInputs(t *testing.T) {
-	lexdump.Inputs(t, inputs)
+	lextest.Inputs(t, inputs)
 }
 
 // The opcodes of RFC 6455, section 5.2.
@@ -90,8 +90,8 @@ func frames() []byte {
 	b = appendFrame(b, true, opText, nil, []byte("Hello"))
 	b = appendFrame(b, true, opText, rfcKey, []byte("Hello"))
 	b = appendFrame(b, true, opPing, nil, []byte("Hello"))
-	b = appendFrame(b, true, opBinary, nil, lexdump.Sequence(0x00, 256))
-	b = appendFrame(b, true, opBinary, rfcKey, lexdump.Sequence(0x80, 300))
+	b = appendFrame(b, true, opBinary, nil, lextest.Sequence(0x00, 256))
+	b = appendFrame(b, true, opBinary, rfcKey, lextest.Sequence(0x80, 300))
 	b = appendFrame(b, true, opPing, rfcKey, nil)
 	b = appendFrame(b, true, opClose, rfcKey, closeBody(1000, "done"))
 	return b
@@ -102,7 +102,7 @@ func frames() []byte {
 // unmasked pong.
 func pieces() []byte {
 	var b []byte
-	b = appendFrame(b, true, opBinary, rfcKey, lexdump.Sequence(0x00, maxPiece+1))
+	b = appendFrame(b, true, opBinary, rfcKey, lextest.Sequence(0x00, maxPiece+1))
 	b = appendFrame(b, true, opPong, nil, []byte("pong"))
 	return b
 }
@@ -127,7 +127,7 @@ func fragmented() []byte {
 func truncated() []byte {
 	var b []byte
 	b = appendFrame(b, true, opText, nil, []byte("Hello"))
-	b = appendFrame(b, true, opBinary, rfcKey, lexdump.Sequence(0x00, 200))
+	b = appendFrame(b, true, opBinary, rfcKey, lextest.Sequence(0x00, 200))
 	return b[:len(b)-150]
 }
 

@@ -10,6 +10,9 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 // The binary test inputs are built here, so the testdata/*.input files are
@@ -39,28 +42,21 @@ func TestInputs(t *testing.T) {
 		path := filepath.Join("testdata", name+".input")
 		got := build(t)
 		if update {
-			if err := os.WriteFile(path, got, 0o644); err != nil {
-				t.Fatal(err)
-			}
+			require.NoError(t, os.WriteFile(path, got, 0o644))
 		}
 		want, err := os.ReadFile(path)
-		if err != nil {
-			t.Fatal(err)
-		}
+		require.NoError(t, err)
 		if encoded[name] {
 			continue
 		}
-		if !bytes.Equal(got, want) {
-			t.Errorf("%s differs from the bytes built in inputs_test.go; run go test -update", path)
-		}
+		assert.Truef(t, bytes.Equal(got, want), "%s differs from the bytes built in inputs_test.go; run go test -update", path)
 	}
 	f, err := os.Open(filepath.Join("testdata", "document.input"))
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	defer f.Close()
-	if _, err := jpeg.Decode(f); err != nil {
-		t.Errorf("image/jpeg does not decode document.input: %v", err)
+	{
+		_, err := jpeg.Decode(f)
+		assert.NoErrorf(t, err, "image/jpeg does not decode document.input: %v", err)
 	}
 }
 
@@ -119,9 +115,7 @@ func document(t *testing.T) []byte {
 		}
 	}
 	var buf bytes.Buffer
-	if err := jpeg.Encode(&buf, img, &jpeg.Options{Quality: 50}); err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, jpeg.Encode(&buf, img, &jpeg.Options{Quality: 50}))
 	// The value area starts after the header (8), the count (2), three
 	// entries (36) and the next-IFD offset (4).
 	exif := exifPayload(binary.LittleEndian, 0, []entry{

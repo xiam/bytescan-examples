@@ -4,18 +4,20 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
 	"github.com/xiam/bytescan-examples/internal/lexdump"
+	"github.com/xiam/bytescan-examples/internal/lextest"
 	"github.com/xiam/bytescan/streamtest"
 )
 
 func TestGolden(t *testing.T) {
-	lexdump.Golden(t, lexdump.Dumper{}, newScanner)
+	lextest.Golden(t, lexdump.Dumper{}, newScanner)
 }
 
 // TestTiling checks that the tokens of every test input, joined, are the
 // input: no mode switch loses or repeats text.
 func TestTiling(t *testing.T) {
-	lexdump.Tiling(t, newScanner)
+	lextest.Tiling(t, newScanner)
 }
 
 // TestRelease checks rule 1 of the driver: a cursor that retains at most 1 KiB
@@ -31,7 +33,8 @@ func TestRelease(t *testing.T) {
 func TestLevelCache(t *testing.T) {
 	d := newScanner(strings.NewReader("[[a]] [=[b]=] [[c]] --[[d]] --[=[e]=] --[[f]] [=[g]=]"))
 	streamtest.LexAll(t, d)
-	if got, want := d.levels.Len(), 4; got != want {
-		t.Errorf("cached level scanners = %d, want %d", got, want)
+	{
+		got, want := d.levels.Len(), 4
+		assert.Equalf(t, want, got, "cached level scanners = %d, want %d", got, want)
 	}
 }

@@ -3,7 +3,7 @@ package main
 import (
 	"testing"
 
-	"github.com/xiam/bytescan-examples/internal/lexdump"
+	"github.com/xiam/bytescan-examples/internal/lextest"
 )
 
 // The binary test inputs are built here, so the testdata/*.input files are
@@ -21,7 +21,7 @@ var inputs = map[string]func() []byte{
 }
 
 func TestInputs(t *testing.T) {
-	lexdump.Inputs(t, inputs)
+	lextest.Inputs(t, inputs)
 }
 
 // stuff appends payload to dst with the byte stuffing of RFC 1055: an END
@@ -59,7 +59,7 @@ func frames() []byte {
 	b := []byte{end}
 	b = append(b, frame(ipv4)...)
 	b = append(b, end, end)
-	b = append(b, frame(lexdump.Sequence(0x80, 32))...)
+	b = append(b, frame(lextest.Sequence(0x80, 32))...)
 	b = append(b, frame([]byte("tail\xC0"))...)
 	b = append(b, frame([]byte{esc})...)
 	return b
@@ -83,7 +83,7 @@ func invalid() []byte {
 func longRun() []byte {
 	b := make([]byte, 0, 2501)
 	for len(b) < 2500 {
-		b = append(b, lexdump.Sequence(0x00, 0xC0)...)
+		b = append(b, lextest.Sequence(0x00, 0xC0)...)
 	}
 	return append(b[:2500], end)
 }

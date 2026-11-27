@@ -62,7 +62,7 @@ differs:
 - Each case in `testdata` is one file of keys, `<case>.input`, and its
   expected output, `<case>.golden`. There is no `.edits` file. The test
   builds the keys and checks them against the committed files
-  (`lexdump.Inputs`), because a backspace is a control byte.
+  (`lextest.Inputs`), because a backspace is a control byte.
 - Besides the change, the program asks the lexer two questions on Enter:
   `Lexer.Unfinished` and `Lexer.ModeAtEnd`. It has no code of its own that
   looks for an open string or comment.
@@ -84,7 +84,7 @@ painted tokens of a highlighter.
 ## Tests
 
 - **Golden test.** Each case in `testdata` runs through `run`, and its output
-  is compared with `<case>.golden` through `lexdump.Compare`. `go test
+  is compared with `<case>.golden` through `lextest.Compare`. `go test
   -update` rewrites the golden files.
 - **Repaint test.** After each edit of each case, the consumer's result
   equals the result of a new consumer that processes the final text from the
